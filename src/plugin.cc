@@ -49,7 +49,7 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			} else if (!strcmp(plugin_info->argv[i].value, "long")) {
 				register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, pass_dump_gate_callback, NULL);
 			} else {
-				printf("Incorrect plugin dump_format value");
+				printf("Incorrect plugin dump_format value\n");
 			}
 		}
 	}
