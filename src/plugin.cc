@@ -58,6 +58,18 @@ static void disable_pass_tree (opt_pass *pass, struct plugin_name_args* plugin_i
 	}
 }
 
+///go through the pass tree and replace every pass with a dummy
+static void print_pass_tree (opt_pass *pass) {
+	while (pass) {
+		
+		print_pass_tree(pass->sub);
+
+		printf("%s\n", pass->name);
+		opt_pass *next = pass->next;
+		pass = next;
+	}
+}
+
 ///prints as much information about a pass as it can, human-readable
 static void pass_dump_gate_callback(void* gcc_data, void* user_data) {
 	if (current_pass) {
@@ -145,9 +157,21 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			if (!strcmp(plugin_info->argv[i].value, "clear")) {
 				insert_marker_pass(plugin_info, GIMPLE_PASS, "*warn_unused_result", PASS_POS_INSERT_BEFORE);
 				register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, clear_pass_tree_gate_callback, NULL);
-			} else if (!strcmp(plugin_info->argv[i].value, "chunk")) {
-				insert_marker_pass(plugin_info, GIMPLE_PASS, "*all_optimizations", PASS_POS_INSERT_AFTER);
-				insert_marker_pass(plugin_info, GIMPLE_PASS, "*all_optimizations", PASS_POS_INSERT_BEFORE);
+			} else if (!strcmp(plugin_info->argv[i].value, "by_marker")) {
+				for (int j = 0; j < plugin_info->argc; j++) {
+					if (!strcmp(plugin_info->argv[j].key, "mark_pass_before")) {
+						char* arg = xstrdup(plugin_info->argv[j].value);
+						char* name = strtok(arg, ".");
+						int type = atoi(strtok(arg, "."));
+						insert_marker_pass(plugin_info, static_cast<opt_pass_type>(type), name, PASS_POS_INSERT_BEFORE);
+					}
+					if (!strcmp(plugin_info->argv[j].key, "mark_pass_after")) {
+						char* arg = xstrdup(plugin_info->argv[j].value);
+						char* name = strtok(arg, ".");
+						int type = atoi(strtok(arg, "."));
+						insert_marker_pass(plugin_info, static_cast<opt_pass_type>(type), name, PASS_POS_INSERT_AFTER);
+					}
+				}
 				register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, clear_pass_tree_gate_callback, NULL);
 			} else {
 				printf("Incorrect plugin pass_reorder value\n");
