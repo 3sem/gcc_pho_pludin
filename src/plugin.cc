@@ -79,6 +79,7 @@ static void pass_dump_gate_callback(void* gcc_data, void* user_data) {
 				current_pass->properties_required, 
 				current_pass->properties_provided, 
 				current_pass->properties_destroyed);
+		printf("Type: %d\n", current_pass->type);
 		printf("Gate status: %d\n", *(int*)gcc_data);
 		printf("Subpasses: %s", current_pass->sub ? "yes\n" : "no\n");
 		printf("TODO before: 0x%X\n", current_pass->todo_flags_start);
@@ -97,7 +98,7 @@ static void pass_dump_short_gate_callback(void* gcc_data, void* user_data) {
 	}
 }
 
-static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pass_type type ,const char* name, enum pass_positioning_ops pos) {
+static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pass_type type, const char* name, enum pass_positioning_ops pos, int count) {
 		struct pass_data dummy_pass_data = {
 			type,
 			"*plugin_dummy_pass",
@@ -113,7 +114,7 @@ static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pa
 		struct register_pass_info dummy_pass_info = {
 			dummy_pass_pass,
 			name,
-			1,
+			count,
 			pos,
 		};
 	
@@ -148,14 +149,15 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			} else if (!strcmp(plugin_info->argv[i].value, "executed")) {
 				register_callback(plugin_info->base_name, PLUGIN_PASS_EXECUTION, pass_exec_callback, NULL);
 			} else {
-				printf("Incorrect plugin dump_format value\n");
+				fprintf(stderr, "Incorrect plugin dump_format value\n");
+				return -1;
 			}
 		}
 
 		//choose pass reorder operation
-		if (!strcmp(plugin_info->argv[i].key, "pass_reorder")) {
+		if (!strcmp(plugin_info->argv[i].key, "pass_remove")) {
 			if (!strcmp(plugin_info->argv[i].value, "clear")) {
-				insert_marker_pass(plugin_info, GIMPLE_PASS, "*warn_unused_result", PASS_POS_INSERT_BEFORE);
+				insert_marker_pass(plugin_info, GIMPLE_PASS, "*warn_unused_result", PASS_POS_INSERT_BEFORE, 1);
 				register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, clear_pass_tree_gate_callback, NULL);
 			} else if (!strcmp(plugin_info->argv[i].value, "by_marker")) {
 				for (int j = 0; j < plugin_info->argc; j++) {
@@ -163,19 +165,41 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 						char* arg = xstrdup(plugin_info->argv[j].value);
 						char* name = strtok(arg, ".");
 						int type = atoi(strtok(arg, "."));
-						insert_marker_pass(plugin_info, static_cast<opt_pass_type>(type), name, PASS_POS_INSERT_BEFORE);
+						insert_marker_pass(plugin_info, static_cast<opt_pass_type>(type), name, PASS_POS_INSERT_BEFORE, 1);
 					}
 					if (!strcmp(plugin_info->argv[j].key, "mark_pass_after")) {
 						char* arg = xstrdup(plugin_info->argv[j].value);
 						char* name = strtok(arg, ".");
 						int type = atoi(strtok(arg, "."));
-						insert_marker_pass(plugin_info, static_cast<opt_pass_type>(type), name, PASS_POS_INSERT_AFTER);
+						insert_marker_pass(plugin_info, static_cast<opt_pass_type>(type), name, PASS_POS_INSERT_AFTER, 1);
 					}
 				}
 				register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, clear_pass_tree_gate_callback, NULL);
 			} else {
-				printf("Incorrect plugin pass_reorder value\n");
+				fprintf(stderr, "Incorrect plugin pass_reorder value\n");
+				return -1;
 			}
+		}
+
+		if (!strcmp(plugin_info->argv[i].key, "pass_replace")) {
+			FILE* passes_file = fopen(plugin_info->argv[i].value, "r");
+			if (passes_file == NULL) {
+				fprintf(stderr, "Could not open file with pass order information\n");
+				return -1;
+			}
+			
+			//insert required marker passes
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "inline_param", PASS_POS_INSERT_BEFORE, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "inline_param", PASS_POS_INSERT_AFTER, 56);
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "*strip_predict_hints", PASS_POS_INSERT_AFTER, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "loopinit", PASS_POS_INSERT_BEFORE, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "loopdone", PASS_POS_INSERT_AFTER, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "local-pure-const", PASS_POS_INSERT_AFTER, 201);
+			insert_marker_pass(plugin_info, opt_pass_type::RTL_PASS, "dfinit", PASS_POS_INSERT_AFTER, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::RTL_PASS, "init-regs", PASS_POS_INSERT_BEFORE, 1);
+			register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, clear_pass_tree_gate_callback, NULL);
+
+			fclose(passes_file);
 		}
 	}
 	
