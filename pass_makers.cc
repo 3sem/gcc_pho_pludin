@@ -77,6 +77,12 @@ opt_pass* pass_by_name(const char* name) {
 	if (!strcmp(name, "loop2_invariant")) {
 		return make_pass_rtl_move_loop_invariants(g);
 	}
+	if (!strcmp(name, "loop2_unroll")) {
+		return make_pass_rtl_unroll_loops(g);
+	}
+	if (!strcmp(name, "loop2_doloop")) {
+		return make_pass_rtl_doloop(g);
+	}
 	if (!strcmp(name, "profile_estimate")) {
 		return make_pass_profile(g);
 	}
