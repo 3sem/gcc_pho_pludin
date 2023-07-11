@@ -8,11 +8,16 @@
 #include "context.h"
 #include "pass_manager.h"
 #include "function.h"
+#include <typeinfo>
 
 int plugin_is_GPL_compatible;
 
+extern char *concat(const char*, ...);
 extern opt_pass *current_pass;
 extern gcc::context* g;
+
+#include "extern_makers.cc"
+#include "pass_makers.cc"
 
 static struct plugin_info plugin_name = {"0.1", "GCC pass reorder experiment"};
 
@@ -98,10 +103,10 @@ static void pass_dump_short_gate_callback(void* gcc_data, void* user_data) {
 	}
 }
 
-static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pass_type type, const char* name, enum pass_positioning_ops pos, int count) {
+static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pass_type type, const char* name, enum pass_positioning_ops pos, int count = 1, const char* postfix = "") {
 		struct pass_data dummy_pass_data = {
 			type,
-			"*plugin_dummy_pass",
+			concat("*plugin_dummy_pass", postfix, NULL),
 			OPTGROUP_NONE,
 			TV_PLUGIN_INIT,
 			0,
@@ -123,7 +128,7 @@ static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pa
 
 static void clear_pass_tree_gate_callback(void* gcc_data, void* used_data) {
 	static bool discard_flag = false;
-	if (!strcmp(current_pass->name, "*plugin_dummy_pass")) {
+	if (!strncmp("*plugin_dummy_pass", current_pass->name, 18)) {
 		discard_flag = !discard_flag;
 		return;
 	}
@@ -140,7 +145,7 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 	register_callback(plugin_info->base_name, PLUGIN_INFO, NULL, &plugin_name);
 
 	for (int i = 0; i < plugin_info->argc; i++) {
-		//choose dump format based on "dump_format" (short/long) argument
+		//choose dump format based on "dump_format" (short/long/executed) argument
 		if (!strcmp(plugin_info->argv[i].key, "dump_format")) {
 			if (!strcmp(plugin_info->argv[i].value, "short")) {
 				register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, pass_dump_short_gate_callback, NULL);
@@ -189,19 +194,72 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			}
 			
 			//insert required marker passes
-			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "inline_param", PASS_POS_INSERT_BEFORE, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "inline_param", PASS_POS_INSERT_BEFORE, 1, "_list1");
 			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "inline_param", PASS_POS_INSERT_AFTER, 56);
-			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "*strip_predict_hints", PASS_POS_INSERT_AFTER, 1);
-			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "loopinit", PASS_POS_INSERT_BEFORE, 1);
-			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "loopdone", PASS_POS_INSERT_AFTER, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "*strip_predict_hints", PASS_POS_INSERT_AFTER, 1, "_list2");
 			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "local-pure-const", PASS_POS_INSERT_AFTER, 201);
-			insert_marker_pass(plugin_info, opt_pass_type::RTL_PASS, "dfinit", PASS_POS_INSERT_AFTER, 1);
+			insert_marker_pass(plugin_info, opt_pass_type::RTL_PASS, "dfinit", PASS_POS_INSERT_AFTER, 1, "_list3");
 			insert_marker_pass(plugin_info, opt_pass_type::RTL_PASS, "init-regs", PASS_POS_INSERT_BEFORE, 1);
 			register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, clear_pass_tree_gate_callback, NULL);
 
+			opt_pass* loop2 = pass_by_name("loop2");
+			opt_pass* loop2init = pass_by_name("loop2_init");
+            opt_pass* loop2done = pass_by_name("loop2_done");
+            opt_pass* doloop = pass_by_name("loop2_invariant");
+
+			loop2->sub = loop2init;
+			loop2init->sub = doloop;
+			doloop->sub = loop2done;
+			
+			struct register_pass_info loop2_data = {loop2, "*plugin_dummy_pass_list3", 1, PASS_POS_INSERT_BEFORE};
+			register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &loop2_data);
+			
 			fclose(passes_file);
+		}
+
+		//create file with make_* functions for passes
+		if (!strcmp(plugin_info->argv[i].key, "generate_makers")) {
+			FILE* passes_file = fopen(plugin_info->argv[i].value, "r");
+			if (passes_file == NULL) {
+				fprintf(stderr, "Plugin could not open file with passes to generate makers for\n");
+				return -1;
+			}
+
+			FILE* makers_file = fopen("pass_makers.cc", "w");
+			if (passes_file == NULL) {
+				fprintf(stderr, "Plugin could not create file for makers\n");
+				fclose(passes_file);
+				return -1;
+			}
+
+			fprintf(makers_file, "opt_pass* pass_by_name(const char* name) {\n");
+			
+			char* line = NULL;
+			size_t len = 0;
+			while (getline(&line, &len, passes_file) != -1) {
+				char* space_ptr = strchr(line, ' ');
+				if (*space_ptr == 0) {
+					fprintf(stderr, "Passes file is corrupted on line [%s]\n", line);
+					free(line);
+					fclose(passes_file);
+					fclose(makers_file);
+					return -1;
+				}
+				*space_ptr = 0;
+				space_ptr += 1;
+
+				int namelen = strlen(space_ptr);
+
+				fprintf(makers_file, "\tif (!strcmp(name, \"%.*s\")) {\n\t\treturn make_%s(g);\n\t}\n", namelen - 1, space_ptr, line);
+			}
+			fprintf(makers_file, "\treturn NULL;\n}");
+
+			free(line);
+			fclose(passes_file);
+			fclose(makers_file);
 		}
 	}
 	
 	return 0;
 }
+
