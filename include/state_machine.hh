@@ -16,14 +16,14 @@ const char standart_dump_file[] = "shuffled.txt";
 // Gets a vector of properties, which is expected to actually be an map: pass id -> it's properties
 // Then, one by one applies passes and changes the property state correspondingly
 // If a pass is met, which's required properties of IR are not met, reports a failure to std::cerr
-struct PropertyStateMachine
+struct PropertyState
 {
     std::unordered_map<int, properties> num_to_prop_;
     std::vector<int> passes_;
 
     int property_state = 1; // in gcc dumps, the first pass already required an existing property 0x1
 
-    PropertyStateMachine(const std::unordered_map<int, properties>& num_to_prop) :
+    PropertyState(const std::unordered_map<int, properties>& num_to_prop) :
     num_to_prop_(num_to_prop)
     {}
 
@@ -54,7 +54,7 @@ struct PropertyStateMachine
 
 // This class gets a range of passes' names and properties fields (required / provided / destroyed) and range of passes names to be shuffled
 // It build a hash map : property state -> vector of avaible passes
-// Then, using PropertyStateMachine, built earlier hash map generates random sequence of given earlier passes
+// Then, using PropertyState, built earlier hash map generates random sequence of given earlier passes
 struct PassListGenerator
 {
     std::vector<pass_info> info_vec_;
@@ -150,7 +150,7 @@ struct PassListGenerator
         shuffled_passes.clear();
         generate_prop_passes_map();
 
-        PropertyStateMachine state(pass_to_properties_);
+        PropertyState state(pass_to_properties_);
         state.property_state = initial_property_state;
 
         std::random_device rd;
@@ -211,7 +211,7 @@ struct PassListGenerator
     {
         std::vector<std::string> passes{parse_passes_file(file_name)};
 
-        PropertyStateMachine state(pass_to_properties_);
+        PropertyState state(pass_to_properties_);
         state.property_state = initial_property_state;
 
         for (auto&& it : passes)
