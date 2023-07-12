@@ -2,7 +2,7 @@
 *.swp
 *.elf
 *.o
-a.out
+*.out
 shuffle
 list1.txt
 list2.txt

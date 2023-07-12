@@ -1,3 +1,5 @@
+.SECONDARY:
+
 ZCC = $(AARCH_GCC) 
 
 QEMU = qemu-aarch64
@@ -24,8 +26,14 @@ test_list%: shuffled%.out $(addprefix ../../, list%.txt) $(OUT_DIR)/base_unpacke
 	$(QEMU) $(QEMU_ARG) ./$< -z -k -c $(OUT_DIR)/shuffled_unpacked > $(OUT_DIR)/shuffled_packed
 	cmp $(OUT_DIR)/shuffled_packed $(OUT_DIR)/base_packed
 
-shuffled%.out : ../../list%.txt ../../plugin.so *.c *.h 
-	$(ZCC) $(CCC_OPTS) -fplugin=../../plugin.so -fplugin-arg-plugin-pass_replace -fplugin-arg-plugin-pass_file=$< -lm *.c -o $@
+shuffled1.out : ../../list1.txt ../../plugin.so *.c *.h 
+	$(ZCC) $(CCC_OPTS) -fplugin=../../plugin.so -fplugin-arg-plugin-pass_replace -fplugin-arg-plugin-pass_file=$< -fplugin-arg-plugin-pass_file=../../lists/list3.txt -lm *.c -o $@
+
+shuffled2.out : ../../list2.txt ../../plugin.so *.c *.h 
+	$(ZCC) $(CCC_OPTS) -fplugin=../../plugin.so -fplugin-arg-plugin-pass_replace -fplugin-arg-plugin-pass_file=$< -fplugin-arg-plugin-pass_file=../../lists/list3.txt -lm *.c -o $@
+
+shuffled3.out : ../../list3.txt ../../plugin.so *.c *.h 
+	$(ZCC) $(CCC_OPTS) -fplugin=../../plugin.so -fplugin-arg-plugin-pass_replace -fplugin-arg-plugin-pass_file=$< -fplugin-arg-plugin-pass_file=../../lists/list3.txt -lm *.c -o $@
 
 shuffled.out: *.c *.h ../../plugin.so $(addprefix ../../, list1.txt list2.txt list3.txt)	
 	$(ZCC) $(CCC_OPTS) $(SHUFFLE_OPTS) -lm *.c -o shuffled.out

@@ -29,13 +29,13 @@ test_lists: plugin.so
 shuffle_test: plugin.so all_lists
 	make -C ./benches/bzip2d
 
-test_list1: plugin.so 
+test_list1: plugin.so shuffle1 
 	make -C ./benches/bzip2d test_list1
 
-test_list2: plugin.so 
+test_list2: plugin.so shuffle2 
 	make -C ./benches/bzip2d test_list2
 
-test_list3: plugin.so 
+test_list3: plugin.so shuffle3
 	make -C ./benches/bzip2d test_list3
 
 CXXFLAGS = -std=c++2a
