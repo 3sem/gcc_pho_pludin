@@ -19,9 +19,24 @@ makers_gen.elf: $(SRC_DIR)/makers_gen.cc
 pass_makers.cc: pass_makers.conf makers_gen.elf 
 	./makers_gen.elf pass_makers.conf
 
-.PHONY: makers all_lists
+.PHONY: makers all_lists test_lists shuffle1 shuffle2 shuffle3 shuffle4 shuffle_test
 makers: pass_makers.cc
 all_lists: shuffle1 shuffle2 shuffle3
+
+test_lists: plugin.so
+	make -C ./benches/bzip2d
+
+shuffle_test: plugin.so all_lists
+	make -C ./benches/bzip2d
+
+test_list1: plugin.so 
+	make -C ./benches/bzip2d test_list1
+
+test_list2: plugin.so 
+	make -C ./benches/bzip2d test_list2
+
+test_list3: plugin.so 
+	make -C ./benches/bzip2d test_list3
 
 CXXFLAGS = -std=c++2a
 
@@ -62,3 +77,6 @@ $(OBJ_DIR)/utilities.o: src/utilities.cc include/utilities.hh
 
 clean_obj:
 	rm $(OBJ_DIR)/*.o
+
+clean_bad_lists:
+	rm -r broken_lists/*

@@ -121,11 +121,11 @@ static int register_passes_from_file(struct plugin_name_args* plugin_info, const
 	if (passes_file != NULL) {
 		
 		const char* ref_pass_name;
-		if (!strcmp(filename, "list1.txt")) {
+		if (strstr(filename, "list1.txt")) {
 			ref_pass_name = "*plugin_dummy_pass_list1";
-		} else if (!strcmp(filename, "list2.txt")) {
+		} else if (strstr(filename, "list2.txt")) {
 			ref_pass_name = "*plugin_dummy_pass_list2";
-		} else if (!strcmp(filename, "list3.txt")) {
+		} else if (strstr(filename, "list3.txt")) {
 			ref_pass_name = "*plugin_dummy_pass_list3";
 		} else {
 			fprintf(stderr, "Unknown filename\n");
