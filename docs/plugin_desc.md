@@ -2,7 +2,7 @@
 
 ## Description
 
-Plugin currently implements dumping, clearing and altering gcc pass tree. Functionality was tested on gcc 7.3.0 built for aarch64 targer.
+Plugin currently implements dumping, clearing and altering gcc pass tree. Functionality was tested on gcc 7.3.0 built for aarch64 target.
 
 ## Usage
 
@@ -40,7 +40,7 @@ After pass tree analysis (passes.def in gcc sources) and some experiments, three
 per-function optimizations and late RTL optimizations. Exact places of marker passes can be seen by utilizing pass dumping with active -fplugin-arg-plugin-pass\_replace option.
 
 
-Curent marker positions:
+Current marker positions:
 	- before inline\_param #1
 	- after inline\_param #2
 	- after \*strip\_predict\_hints
