@@ -1,3 +1,5 @@
+//! GCC phase reordering experiment plugin source
+
 #include "stdio.h"
 #include "string.h"
 
@@ -10,17 +12,21 @@
 #include "function.h"
 #include <typeinfo>
 
+/// Symbol required by GCC
 int plugin_is_GPL_compatible;
 
 extern char *concat(const char*, ...);
 extern opt_pass *current_pass;
 extern gcc::context* g;
 
+/// All pass make fuctions specified as "extern", taken from tree-pass.h in gcc sources
 #include "extern_makers.cc"
+/// Auto-generated from pass_makers.conf include that matches pass name and its make function
 #include "pass_makers.cc"
 
 static struct plugin_info plugin_name = {"0.1", "GCC pass reorder experiment"};
 
+/// Dummy pass class used for markers in pass tree
 class dummy_pass: public opt_pass {
 	public:
 		dummy_pass(const pass_data& data, gcc::context* g) : opt_pass(data, g) {}
@@ -28,42 +34,7 @@ class dummy_pass: public opt_pass {
 		opt_pass* clone() override {return new dummy_pass(*this);} 
 };
 
-///go through the pass tree and replace every pass with a dummy
-static void disable_pass_tree (opt_pass *pass, struct plugin_name_args* plugin_info) {
-	while (pass) {
-		
-		//construct a dummy pass and its info
-		struct pass_data dummy_pass_data = {
-			GIMPLE_PASS,
-			"*plugin_dummy_pass",
-			OPTGROUP_NONE,
-			TV_PLUGIN_INIT,
-			0,
-			0,
-			0,
-			0,
-			0,
-		};
-		opt_pass* dummy_pass_pass = new dummy_pass(dummy_pass_data, g);
-		struct register_pass_info dummy_pass_info = {
-			dummy_pass_pass,
-			pass->name,
-			1,
-			PASS_POS_REPLACE,
-		};
-
-		printf("%s %d\n", pass->name, pass->static_pass_number);
-		
-		
-		//replace current pass with dummy
-		register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &dummy_pass_info);
-
-		opt_pass *next = pass->next;
-		pass = next;
-	}
-}
-
-///go through the pass tree and replace every pass with a dummy
+/// Go through the pass tree and print name of every pass (unused)
 static void print_pass_tree (opt_pass *pass) {
 	while (pass) {
 		
@@ -75,7 +46,7 @@ static void print_pass_tree (opt_pass *pass) {
 	}
 }
 
-///prints as much information about a pass as it can, human-readable
+/// Gate callback, prints as much information about a pass as it can, human-readable
 static void pass_dump_gate_callback(void* gcc_data, void* user_data) {
 	if (current_pass) {
 		printf("\n");
@@ -93,7 +64,7 @@ static void pass_dump_gate_callback(void* gcc_data, void* user_data) {
 	}
 }
 
-///prints pass data in format "name properties_required properties_provided properties_broken"
+/// Gate callback, prints pass data in format "name properties_required properties_provided properties_broken"
 static void pass_dump_short_gate_callback(void* gcc_data, void* user_data) {
 	if (current_pass) {
 		printf("%s %d %d %d\n", current_pass->name, 
@@ -103,6 +74,7 @@ static void pass_dump_short_gate_callback(void* gcc_data, void* user_data) {
 	}
 }
 
+/// Inserts marker pass in reference to any pass in pass tree, postfix arg append marker pass name to allow creation of unique passes
 static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pass_type type, const char* name, enum pass_positioning_ops pos, int count = 1, const char* postfix = "") {
 		struct pass_data dummy_pass_data = {
 			type,
@@ -126,6 +98,7 @@ static void insert_marker_pass(struct plugin_name_args* plugin_info, enum opt_pa
 		register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &dummy_pass_info);
 }
 
+/// Gate callback, overrides gate status of passes between markers, disabling them
 static void clear_pass_tree_gate_callback(void* gcc_data, void* used_data) {
 	static bool discard_flag = false;
 	if (!strncmp("*plugin_dummy_pass", current_pass->name, 18)) {
@@ -137,10 +110,12 @@ static void clear_pass_tree_gate_callback(void* gcc_data, void* used_data) {
 	}
 }
 
+/// Pass execution callback, prints pass name. Can be used to determine which passes are actually being run
 static void pass_exec_callback(void* gcc_data, void* used_data) {
 	printf("%s\n", current_pass->name);
 };
 
+/// Parses pass list file and inserts passes from it into corresponding place in pass tree
 static int register_passes_from_file(struct plugin_name_args* plugin_info, const char* filename) {
 	FILE* passes_file = fopen(filename, "r");
 	if (passes_file != NULL) {
@@ -212,6 +187,7 @@ static int register_passes_from_file(struct plugin_name_args* plugin_info, const
 	return 0;
 }
 
+/// Plugin initialization function, called by gcc to register plugin. Parses plugin arguments
 int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version) {
 	register_callback(plugin_info->base_name, PLUGIN_INFO, NULL, &plugin_name);
 
@@ -230,7 +206,7 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			}
 		}
 
-		//choose pass reorder operation
+		//choose pass remove operation
 		if (!strcmp(plugin_info->argv[i].key, "pass_remove")) {
 			if (!strcmp(plugin_info->argv[i].value, "clear")) {
 				insert_marker_pass(plugin_info, GIMPLE_PASS, "*warn_unused_result", PASS_POS_INSERT_BEFORE, 1);
@@ -257,6 +233,7 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			}
 		}
 
+		//choose pass replacement options
 		if (!strcmp(plugin_info->argv[i].key, "pass_replace")) {
 			
 			//insert required marker passes
@@ -277,6 +254,24 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			}
 		}
 
+		//print help
+		if (!strcmp(plugin_info->argv[i].key, "help")) {
+			fprintf(stderr, "Plugin implementing gcc phase reorder\n"
+							"To pass arguments to plugin use -fplugin-arg-plugin-<name>=<arg>\n"
+							"Possible arguments:\n"
+							"\tdump_format - choose pass dump format (to stdout):\n"
+							"\t\tlong :     provides as much information about passes as possible. Prints passes even if they did not execute\n"
+							"\t\tshort :    short, machine-readable format with information about pass properties. Prints passes even if they did not execute\n"
+							"\t\texecuted : short, only pass names. Prints only executed passes\n\n"
+							"\tpass_remove - remove passes from pass tree:\n"
+							"\t\tclear : clear pass tree (compilation will fail with internal errors)\n"
+							"\t\tby_marker : clear passes between markers, requires args mark_pass_before/mark_pass_after\n\n"
+							"\tmark_pass_before/mark_pass_after - insert marker before/after pass, can only inster before/after the first instance of reference pass\n"
+							"\t\treference pass name format is <name>.<type>, where type is from enum {GIMPLE, RTL, SIMPLE_IPA, IPA}\n\n"
+							"\tpass_replace - remove optimization passes and read new passes to insert from lists\n\n"
+		 					"\tpass_list - specifies files to take passes from. Possible file names are: \"list1.txt\", \"list2.txt\", \"list3.txt\".\n"
+							"\t\tPlace where pass list is inserted is based on file name\n");
+		}
 	}
 	return 0;
 }

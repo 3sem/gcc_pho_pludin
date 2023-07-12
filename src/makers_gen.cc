@@ -1,3 +1,5 @@
+//! This program generates pass_makers.cc from file with "pass_class pass_name" pairs
+
 #include "cstdlib"
 #include "stdio.h"
 #include "string.h"

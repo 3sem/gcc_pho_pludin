@@ -1,4 +1,6 @@
+#Env variable AARCH_GCC with name of target compiler is required
 TARGET_GCC=$(AARCH_GCC)
+#Get path to header files from target gcc
 INCLUDE_DIR=$(shell $(TARGET_GCC) -print-file-name=plugin)
 SRC_DIR=src
 
