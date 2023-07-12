@@ -57,7 +57,7 @@ opt_pass* pass_by_name(const char* name) {
 		return make_pass_early_inline(g);
 	}
 	if (!strcmp(name, "profile_estimate")) {
-		return make_pass_ipa_profile(g);
+		return make_pass_profile(g);
 	}
 	if (!strcmp(name, "local-pure-const")) {
 		return make_pass_local_pure_const(g);

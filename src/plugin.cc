@@ -141,6 +141,77 @@ static void pass_exec_callback(void* gcc_data, void* used_data) {
 	printf("%s\n", current_pass->name);
 };
 
+static int register_passes_from_file(struct plugin_name_args* plugin_info, const char* filename) {
+	FILE* passes_file = fopen(filename, "r");
+	if (passes_file != NULL) {
+		
+		const char* ref_pass_name;
+		if (!strcmp(filename, "list1.txt")) {
+			ref_pass_name = "*plugin_dummy_pass_list1";
+		} else if (!strcmp(filename, "list2.txt")) {
+			ref_pass_name = "*plugin_dummy_pass_list2";
+		} else if (!strcmp(filename, "list3.txt")) {
+			ref_pass_name = "*plugin_dummy_pass_list3";
+		} else {
+			fprintf(stderr, "Unknown filename\n");
+			return -1;
+		}
+
+		
+		char* line = NULL;
+		size_t len = 0;
+		int res = getline(&line, &len, passes_file);
+		while (res != -1) {
+			if (line[res - 1] == '\n') {
+				line[res - 1] = 0;
+			}
+			opt_pass* pass = pass_by_name(line);
+			if (pass == NULL) {
+				fprintf(stderr, "Failure reading pass file [%s], unknown pass name [%s]\n", filename, line);
+				return -1;
+			}
+			if (pass->sub != NULL) {
+				fprintf(stderr, "HUH?! [%s]\n", line);
+				return -1;
+			}
+			struct register_pass_info pass_data = {pass, ref_pass_name, 1, PASS_POS_INSERT_BEFORE};
+
+			
+			char* subline = NULL;
+			size_t sublen = 0;
+			res = getline(&subline, &sublen, passes_file);
+			opt_pass* prev_sub = NULL;
+			while ((res != -1) && (subline[0] == '>')) {
+				if (subline[res - 1] == '\n') {
+					subline[res - 1] = 0;
+				}
+				opt_pass* subpass = pass_by_name(subline + 1);
+				if (subpass == NULL) {
+					fprintf(stderr, "Failure reading pass file, unknown pass name [%s]\n", subline + 1);
+					return -1;
+				}
+				if (pass->sub == NULL) {
+					pass->sub = subpass;
+				} else {
+					prev_sub->next = subpass;
+				}
+				prev_sub = subpass;
+				
+				res = getline(&subline, &sublen, passes_file);
+			}
+			register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &pass_data);
+			line = subline;
+		}
+		fclose(passes_file);
+		free(line);
+	} else {
+		fprintf(stderr, "Plugin could not open passes file\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version) {
 	register_callback(plugin_info->base_name, PLUGIN_INFO, NULL, &plugin_name);
 
@@ -187,11 +258,6 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 		}
 
 		if (!strcmp(plugin_info->argv[i].key, "pass_replace")) {
-			FILE* passes_file = fopen(plugin_info->argv[i].value, "r");
-			if (passes_file == NULL) {
-				fprintf(stderr, "Could not open file with pass order information\n");
-				return -1;
-			}
 			
 			//insert required marker passes
 			insert_marker_pass(plugin_info, opt_pass_type::GIMPLE_PASS, "inline_param", PASS_POS_INSERT_BEFORE, 1, "_list1");
@@ -202,64 +268,16 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 			insert_marker_pass(plugin_info, opt_pass_type::RTL_PASS, "init-regs", PASS_POS_INSERT_BEFORE, 1);
 			register_callback(plugin_info->base_name, PLUGIN_OVERRIDE_GATE, clear_pass_tree_gate_callback, NULL);
 
-			opt_pass* loop2 = pass_by_name("loop2");
-			opt_pass* loop2init = pass_by_name("loop2_init");
-            opt_pass* loop2done = pass_by_name("loop2_done");
-            opt_pass* doloop = pass_by_name("loop2_invariant");
-
-			loop2->sub = loop2init;
-			loop2init->sub = doloop;
-			doloop->sub = loop2done;
-			
-			struct register_pass_info loop2_data = {loop2, "*plugin_dummy_pass_list3", 1, PASS_POS_INSERT_BEFORE};
-			register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &loop2_data);
-			
-			fclose(passes_file);
-		}
-
-		//create file with make_* functions for passes
-		if (!strcmp(plugin_info->argv[i].key, "generate_makers")) {
-			FILE* passes_file = fopen(plugin_info->argv[i].value, "r");
-			if (passes_file == NULL) {
-				fprintf(stderr, "Plugin could not open file with passes to generate makers for\n");
-				return -1;
-			}
-
-			FILE* makers_file = fopen("pass_makers.cc", "w");
-			if (passes_file == NULL) {
-				fprintf(stderr, "Plugin could not create file for makers\n");
-				fclose(passes_file);
-				return -1;
-			}
-
-			fprintf(makers_file, "opt_pass* pass_by_name(const char* name) {\n");
-			
-			char* line = NULL;
-			size_t len = 0;
-			while (getline(&line, &len, passes_file) != -1) {
-				char* space_ptr = strchr(line, ' ');
-				if (*space_ptr == 0) {
-					fprintf(stderr, "Passes file is corrupted on line [%s]\n", line);
-					free(line);
-					fclose(passes_file);
-					fclose(makers_file);
-					return -1;
+			for (int j = 0; j < plugin_info->argc; j++) {
+				if (!strcmp(plugin_info->argv[j].key, "pass_file")) {
+					if (register_passes_from_file(plugin_info, plugin_info->argv[j].value)) {
+						return -1;
+					}
 				}
-				*space_ptr = 0;
-				space_ptr += 1;
-
-				int namelen = strlen(space_ptr);
-
-				fprintf(makers_file, "\tif (!strcmp(name, \"%.*s\")) {\n\t\treturn make_%s(g);\n\t}\n", namelen - 1, space_ptr, line);
 			}
-			fprintf(makers_file, "\treturn NULL;\n}");
-
-			free(line);
-			fclose(passes_file);
-			fclose(makers_file);
 		}
+
 	}
-	
 	return 0;
 }
 
