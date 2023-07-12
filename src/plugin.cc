@@ -269,7 +269,7 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
 							"\tmark_pass_before/mark_pass_after - insert marker before/after pass, can only inster before/after the first instance of reference pass\n"
 							"\t\treference pass name format is <name>.<type>, where type is from enum {GIMPLE, RTL, SIMPLE_IPA, IPA}\n\n"
 							"\tpass_replace - remove optimization passes and read new passes to insert from lists\n\n"
-		 					"\tpass_list - specifies files to take passes from. Possible file names are: \"list1.txt\", \"list2.txt\", \"list3.txt\".\n"
+		 					"\tpass_file - specifies files to take passes from. Possible file names are: \"list1.txt\", \"list2.txt\", \"list3.txt\".\n"
 							"\t\tPlace where pass list is inserted is based on file name\n");
 		}
 	}

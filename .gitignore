@@ -1,3 +1,6 @@
 *.so
 *.swp
 *.elf
+*.o
+a.out
+shuffle

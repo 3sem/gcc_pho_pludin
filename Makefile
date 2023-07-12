@@ -19,8 +19,9 @@ makers_gen.elf: $(SRC_DIR)/makers_gen.cc
 pass_makers.cc: pass_makers.conf makers_gen.elf 
 	./makers_gen.elf pass_makers.conf
 
-.PHONY: makers
+.PHONY: makers all_lists
 makers: pass_makers.cc
+all_lists: shuffle1 shuffle2 shuffle3
 
 CXXFLAGS = -std=c++2a
 
