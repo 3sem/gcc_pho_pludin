@@ -1,3 +1,6 @@
+#ifndef UTILITIES_HH
+#define UTILITIES_HH
+
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
@@ -94,3 +97,5 @@ std::unordered_set<std::string> get_providing_passes(iter begin, iter end)
     return providing_passes;
 }
 
+
+#endif

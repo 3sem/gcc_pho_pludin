@@ -55,6 +55,7 @@ std::vector<pass_info> parse_log(const std::string& file_name)
 
         iter = second_iter = destr_iter_pair.second;
     }
+    info_vec.push_back({"rtl pre", {512, 0, 0}});
 
     return info_vec;
 }

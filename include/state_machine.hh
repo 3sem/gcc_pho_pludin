@@ -1,3 +1,6 @@
+#ifndef STATE_MACHINE_HH
+#define STATE_MACHINE_HH
+
 #include <iostream>
 #include <algorithm>
 #include <numeric>
@@ -5,7 +8,7 @@
 #include "utilities.hh"
 
 const char standart_pass_decription_file[] = "unique_passes.txt";
-const char standart_pass_to_shuffle_file[] = "pass_log_test.txt";
+const char standart_pass_to_shuffle_file[] = "dummy_file_name_if_not_given.txt";
 const char standart_dump_file[] = "shuffled.txt";
 
 // Property state machine
@@ -27,7 +30,7 @@ struct PropertyStateMachine
     int apply_pass(int pass)
     {
         passes_.push_back(pass);
-        properties pass_prop = num_to_prop_[pass];
+        properties pass_prop = num_to_prop_.at(pass);
 
         if ((property_state & pass_prop.required) != pass_prop.required)
         {
@@ -73,7 +76,7 @@ struct PassListGenerator
     PassListGenerator(iter_info begin_info, iter_info end_info, iter_name begin_name, iter_name end_name) : 
         info_vec_{begin_info, end_info}, pass_vec_{begin_name, end_name}
     {
-        get_pass_to_number_map();
+        get_pass_name_to_id_maps();
     }
 
     template <typename iter>
@@ -97,7 +100,7 @@ struct PassListGenerator
     }
 
     // map passes' names onto ids
-    void get_pass_to_number_map()
+    void get_pass_name_to_id_maps()
     {
         int i = 0;
 
@@ -110,7 +113,7 @@ struct PassListGenerator
 
         std::vector<std::string> for_inline = {"*rebuild_cgraph_edges", "inline_param"};
         std::vector<std::string> for_sched4 = {"split4", "sched2"};
-        std::vector<std::string> for_loopinit = {"fix_loops", "loopinit"};
+        std::vector<std::string> for_loopinit = {"fix_loops", "loop"};
         std::vector<std::string> for_noloop = {"fix_loops", "no_loop"};
         std::vector<std::string> for_loops = {"loop2", "loop2_init", "loop2_invariant", "loop2_unroll", "loop2_doloop", "loop2_done"};
 
@@ -134,7 +137,7 @@ struct PassListGenerator
         {
             for (auto&& requirement_it : unique_requirements)
             {
-                int required = pass_to_properties_[name_to_id_map_[pass_it]].required;
+                int required = pass_to_properties_.at(name_to_id_map_[pass_it]).required;
                 if (required == requirement_it)
                     unique_requirement_to_passes_[requirement_it].push_back({name_to_id_map_[pass_it]});
             }
@@ -182,7 +185,7 @@ struct PassListGenerator
 
             passes_to_choose_from.clear();
 
-            auto&& to_erase_used_pass_from = unique_requirement_to_passes_[pass_to_properties_[chosen_pass].required];
+            auto&& to_erase_used_pass_from = unique_requirement_to_passes_[pass_to_properties_.at(chosen_pass).required];
             to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
 
         }
@@ -218,6 +221,7 @@ struct PassListGenerator
             // std::cout << " and the state is " << state.property_state << std::endl;
             state.apply_pass(name_to_id_map_[it]);
         }
+        std::cerr << state.property_state << std::endl;
     }
 
     std::vector<std::string>::iterator begin() { return shuffled_passes.begin(); }
@@ -261,3 +265,5 @@ public:
         output << buffer.str();
     }
 };
+
+#endif
