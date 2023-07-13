@@ -13,7 +13,7 @@ std::string get_file_text(const std::string& file_name)
     return dump_buf.str();
 }
 
-std::pair<int, std::string::const_iterator> find_number(std::string::const_iterator begin, const std::string& str)
+std::pair<unsigned long, std::string::const_iterator> find_number(std::string::const_iterator begin, const std::string& str)
 {
     auto&& is_digit = [](const char c){return isdigit(c); };
     begin = std::find_if(begin, str.end(), is_digit);
@@ -22,16 +22,39 @@ std::pair<int, std::string::const_iterator> find_number(std::string::const_itera
     return {std::stoi(std::string{begin, end}), end};
 }
 
-std::vector<pass_info> parse_log(const std::string& file_name)
+std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::string::const_iterator end)
+{
+    std::vector<std::string> pass_vec;
+    auto it = begin;
+    auto second_it = begin;
+
+    for (; (it != end) && (second_it != end); it++)
+    {
+        second_it = std::find_if(it, end, [](const char c){ return c == ' ';});
+        auto&& pass_name = std::string{it, second_it};
+        if (pass_name == "rtl")
+        {
+            pass_name.append(" pre");
+            second_it += 4; // len of " pre"
+        }
+        pass_vec.push_back(pass_name);
+
+        it = second_it;
+    }
+
+    return pass_vec;
+}
+
+std::vector<pass_info> parse_log(const std::string& info_file_name)
 {
     std::string buf;
     try
     {
-        buf = get_file_text(file_name);
+        buf = get_file_text(info_file_name);
     }
     catch(const std::ios_base::failure& exc)
     {
-        std::cerr << "Could not open file " << file_name << " to get passes info" << std::endl;
+        std::cerr << "Could not open file " << info_file_name << " to get passes info" << std::endl;
         throw;
     }
 
@@ -42,7 +65,6 @@ std::vector<pass_info> parse_log(const std::string& file_name)
     {
         pass_info info;
         second_iter = std::find_if(iter, buf.cend(), [](const char c){ return c == ' ';});
-
 
         info.name = std::string(iter, second_iter);
 

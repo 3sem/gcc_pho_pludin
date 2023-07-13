@@ -12,9 +12,9 @@
 
 struct properties
 {
-    int required = 0;
-    int provided = 0;
-    int destroyed = 0;
+    unsigned long required = 0;
+    unsigned long provided = 0;
+    unsigned long destroyed = 0;
 };
 
 inline bool operator==(const properties& lhs, const properties& rhs)
@@ -64,14 +64,70 @@ namespace std
 
 
 std::string get_file_text(const std::string& file_name);
-std::vector<pass_info> parse_log(const std::string& file_name);
+std::vector<pass_info> parse_log(const std::string& info_file_name);
 std::vector<std::string> parse_passes_file(const std::string& file_name);
-std::pair<int, std::string::const_iterator> find_number(std::string::const_iterator begin, const std::string& str);
+std::pair<unsigned long, std::string::const_iterator> find_number(std::string::const_iterator begin, const std::string& str);
+std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::string::const_iterator end);
+
 
 template <typename iter>
-std::unordered_set<int> get_unique_requirements(iter begin, iter end)
+unsigned long parse_constraints(iter begin, iter end, const std::string& constraint_file_name)
 {
-    std::unordered_set<int> unique_requirements;
+    std::string constraint_buf;
+    try
+    {
+        constraint_buf = get_file_text(constraint_file_name);
+    }
+    catch(const std::ios_base::failure& exc)
+    {
+        std::cerr << "Could not open file " << constraint_file_name << " to get constraints info" << std::endl;
+        return 0;
+    }
+
+    auto constr_it = constraint_buf.begin();
+    auto line_end = constr_it;
+    unsigned long add_starting_state = 0;
+
+    for (unsigned long requirement = 1 << 18; (constr_it != constraint_buf.end()) && (line_end != constraint_buf.end()); constr_it++)
+    {
+        line_end = std::find(constr_it, constraint_buf.end(), '\n');
+
+        std::vector<std::string> line_of_passes = get_passes_seq(constr_it, line_end);
+
+
+        auto line_iter = line_of_passes.begin();
+        auto second_line_iter = ++line_of_passes.begin();
+        for (; second_line_iter != line_of_passes.end(); line_iter++, second_line_iter++ )
+        {
+            auto first_pass = std::find_if(begin, end,
+                                           [&name = *line_iter](const pass_info& elem){return elem.name == name;});
+            if (*second_line_iter == "!")
+            {
+                second_line_iter++;
+                line_iter++;
+                first_pass->prop.destroyed |= requirement;
+                add_starting_state |= requirement;
+            }
+            else
+            {
+                first_pass->prop.provided |= requirement;
+            }
+            auto second_pass = std::find_if(begin, end,
+                                            [&name = *second_line_iter](const pass_info& elem){return elem.name == name;});
+
+            second_pass->prop.required |= requirement;
+            requirement = requirement << 1;
+        }
+        constr_it = line_end;
+    }
+
+    return add_starting_state;
+}
+
+template <typename iter>
+std::unordered_set<long> get_unique_requirements(iter begin, iter end)
+{
+    std::unordered_set<long> unique_requirements;
     for (; begin != end; begin++)
     {
         unique_requirements.insert(begin->prop.required);

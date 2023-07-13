@@ -8,18 +8,24 @@
 class Driver
 {
     std::string descript_file_;
+    std::string constraint_file_;
 
     bool shuffle_only_one = false;
 
 public:
-    Driver(const std::string descript_file) : descript_file_(descript_file)
+    Driver(const std::string& descript_file, const std::string& constraint_file) : descript_file_(descript_file), constraint_file_(constraint_file)
     {}
 
+    void set_if_shuffle_multiple ( bool flag ) { shuffle_only_one = flag; }
 
     void generate_file_with_shuffle(const std::string& to_shuffle_file)
     {
         std::vector<pass_info> info_vec{parse_log(descript_file_)};
+        unsigned long custom_start_state = parse_constraints(info_vec.begin(), info_vec.end(), constraint_file_);
         std::vector<std::string> passes{parse_passes_file(to_shuffle_file)};
+
+        // for (auto&& it : info_vec)
+        //     std::cout << it.name << ' ' << it.prop.required << ' ' << it.prop.provided << ' ' << it.prop.destroyed << std::endl;
 
         std::unordered_map<std::string, int> list_to_starting_property = { {"lists/to_shuffle1.txt", 76079}, {"lists/to_shuffle2.txt", 76079},
                                                                            {"lists/to_shuffle3.txt", 130760}, {"lists/to_shuffle4.txt", 126255}        };
@@ -28,7 +34,7 @@ public:
             passes.push_back("loop2");
 
         PassListGenerator gen {info_vec.begin(), info_vec.end(), passes.begin(), passes.end()};
-        gen.shuffle_pass_order(list_to_starting_property[to_shuffle_file]); // TODO: make init state dependent on list to shuffle 
+        gen.shuffle_pass_order(custom_start_state | list_to_starting_property[to_shuffle_file]);
 
         std::vector<std::string> shuffled {gen.begin(), gen.end()};
 
@@ -38,7 +44,7 @@ public:
             if (!shuffle_only_one)
             {
                 PassListGenerator gen_loop_list {info_vec.begin(), info_vec.end(), loop_passes.begin(), loop_passes.end()};
-                gen_loop_list.shuffle_pass_order(126255);
+                gen_loop_list.shuffle_pass_order(custom_start_state | list_to_starting_property["lists/to_shuffle4.txt"]);
 
                 // std::vector<std::string> shuffled_list4 {gen_loop_list.begin(), gen_loop_list.end()};
                 // shuffled_list4.push_back("loopdone");

@@ -21,7 +21,7 @@ struct PropertyStateMachine
     std::unordered_map<int, properties> num_to_prop_;
     std::vector<int> passes_;
 
-    int property_state = 1; // in gcc dumps, the first pass already required an existing property 0x1
+    unsigned long property_state = 1; // in gcc dumps, the first pass already required an existing property 0x1
 
     PropertyStateMachine(const std::unordered_map<int, properties>& num_to_prop) :
     num_to_prop_(num_to_prop)
@@ -61,7 +61,7 @@ struct PassListGenerator
     std::unordered_map<std::string, int> name_to_id_map_; // we give each pass an id and work with ids to avoid needless heap indirection
     std::unordered_map<int, properties> pass_to_properties_; // hash map: pass id -> it's properties
 
-    std::unordered_map<int, std::vector<int>> unique_requirement_to_passes_;
+    std::unordered_map<unsigned long, std::vector<int>> unique_requirement_to_passes_;
 
     std::vector<std::string> pass_vec_; // vector of passes to shuffle
     std::unordered_map<int, std::vector<std::string>> id_to_pass_batch;
@@ -118,7 +118,24 @@ struct PassListGenerator
         std::vector<std::string> for_loops = {"loop2", "loop2_init", "loop2_invariant", "loop2_unroll", "loop2_doloop", "loop2_done"};
 
         std::vector pass_batches_names_vec = {for_inline, for_sched4, for_loopinit, for_noloop, for_loops};
-        std::vector<properties> pass_batches_prop_vec = { {8, 0, 0}, {0, 0, 0}, {8, 0, 0}, {8, 0, 0}, {0, 0, 2048} };
+        std::vector<properties> pass_batches_prop_vec;
+        for (int k = 0; k < pass_batches_names_vec.size(); k++)
+        {
+            properties prop_for_batch;
+
+            for (auto&& name_it : pass_batches_names_vec[k])
+            {
+                auto&& pass_info_it = std::find_if(info_vec_.begin(), info_vec_.end(), [&name = name_it](const pass_info& info){ return info.name == name; });
+                prop_for_batch.required |= pass_info_it->prop.required;
+
+                prop_for_batch.provided |= pass_info_it->prop.provided;
+                prop_for_batch.provided &= ~pass_info_it->prop.destroyed;
+                prop_for_batch.destroyed |= pass_info_it->prop.destroyed;
+            }
+
+            pass_batches_prop_vec.push_back(prop_for_batch);
+        }
+
         int j = 0;
         for (auto&& it : pass_batches_names_vec)
         {
@@ -137,7 +154,7 @@ struct PassListGenerator
         {
             for (auto&& requirement_it : unique_requirements)
             {
-                int required = pass_to_properties_.at(name_to_id_map_[pass_it]).required;
+                auto&& required = pass_to_properties_.at(name_to_id_map_[pass_it]).required;
                 if (required == requirement_it)
                     unique_requirement_to_passes_[requirement_it].push_back({name_to_id_map_[pass_it]});
             }
@@ -145,7 +162,7 @@ struct PassListGenerator
     }
 
     // the shuffling itself
-    void shuffle_pass_order(int initial_property_state)
+    void shuffle_pass_order(unsigned long initial_property_state)
     {
         shuffled_passes.clear();
         generate_prop_passes_map();
@@ -162,7 +179,7 @@ struct PassListGenerator
 
         for (int i = 0; i < pass_vec_.size(); i++)
         {
-            int property_state = state.property_state;
+            auto&& property_state = state.property_state;
             for (auto&& it : get_unique_requirements(info_vec_.begin(), info_vec_.end()))
             {
                 if (((property_state & it) == it) && !unique_requirement_to_passes_[it].empty())
@@ -207,7 +224,7 @@ struct PassListGenerator
 
     }
 
-    void verify(int initial_property_state, const std::string& file_name)
+    void verify(unsigned long initial_property_state, const std::string& file_name)
     {
         std::vector<std::string> passes{parse_passes_file(file_name)};
 
