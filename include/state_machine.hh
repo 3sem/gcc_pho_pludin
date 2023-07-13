@@ -69,8 +69,12 @@ struct PassListGenerator
 
     std::vector<std::string> shuffled_passes;
 
+    bool fail_if_not_all_passes_used = true;
+
+    static constexpr int COULD_NOT_GEN = -1;
     static constexpr int USED_PASS = -2;
     static constexpr int MAX_PASS_AMOUNT = 250;
+    static constexpr int TRY_AMOUNT = 1e4;
 
     template <typename iter_info, typename iter_name>
     PassListGenerator(iter_info begin_info, iter_info end_info, iter_name begin_name, iter_name end_name) : 
@@ -78,6 +82,8 @@ struct PassListGenerator
     {
         get_pass_name_to_id_maps();
     }
+
+    void set_fail_gen_flag (bool flag) { fail_if_not_all_passes_used = flag; }
 
     template <typename iter>
     void get_pass_batch_to_id(iter begin, iter end, int id, const properties& prop, const std::string& batch_name)
@@ -162,9 +168,8 @@ struct PassListGenerator
     }
 
     // the shuffling itself
-    void shuffle_pass_order(unsigned long initial_property_state)
+    int shuffle_pass_order(unsigned long initial_property_state)
     {
-        int TRY_AMOUNT = 1e4;
         PropertyStateMachine state(pass_to_properties_);
 
         for (int i = 0; (i < TRY_AMOUNT) && (state.passes_.size() != pass_vec_.size()); i++)
@@ -228,6 +233,10 @@ struct PassListGenerator
             }
         }
 
+        if ((state.passes_.size() != pass_vec_.size()) && fail_if_not_all_passes_used)
+            return COULD_NOT_GEN; // if could not generate sequence with all passes and flag to fail in this scenario is set
+
+        return 0;
     }
 
     void verify(unsigned long initial_property_state, const std::string& file_name)

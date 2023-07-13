@@ -13,5 +13,5 @@ int main(int argc, char* argv[])
     }
 
     Driver driver(standart_pass_decription_file, constraints_file);
-    driver.generate_file_with_shuffle(to_shuffle_file);
+    return driver.generate_file_with_shuffle(to_shuffle_file);
 }

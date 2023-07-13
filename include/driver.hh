@@ -18,7 +18,7 @@ public:
 
     void set_if_shuffle_multiple ( bool flag ) { shuffle_only_one = flag; }
 
-    void generate_file_with_shuffle(const std::string& to_shuffle_file)
+    int generate_file_with_shuffle(const std::string& to_shuffle_file)
     {
         std::vector<pass_info> info_vec{parse_log(descript_file_)};
         unsigned long custom_start_state = parse_constraints(info_vec.begin(), info_vec.end(), constraint_file_);
@@ -34,7 +34,10 @@ public:
             passes.push_back("loop2");
 
         PassListGenerator gen {info_vec.begin(), info_vec.end(), passes.begin(), passes.end()};
-        gen.shuffle_pass_order(custom_start_state | list_to_starting_property[to_shuffle_file]);
+        bool failed = gen.shuffle_pass_order(custom_start_state | list_to_starting_property[to_shuffle_file]);
+
+        if (failed)
+            return PassListGenerator::COULD_NOT_GEN;
 
         std::vector<std::string> shuffled {gen.begin(), gen.end()};
 
@@ -67,6 +70,8 @@ public:
 
         PassDumper to_dump(std::string{"list"} + std::string{list_num, to_shuffle_file.end()}, "", "");
         to_dump.dump(shuffled.begin(), shuffled.end());
+
+        return 0;
     }
 };
 
