@@ -18,19 +18,20 @@ const char standart_dump_file[] = "shuffled.txt";
 // If a pass is met, which's required properties of IR are not met, reports a failure to std::cerr
 struct PropertyStateMachine
 {
-    std::unordered_map<int, properties> num_to_prop_;
+    std::unordered_map<int, pass_prop> num_to_prop_;
     std::vector<int> passes_;
 
     unsigned long property_state = 1; // in gcc dumps, the first pass already required an existing property 0x1
+    
 
-    PropertyStateMachine(const std::unordered_map<int, properties>& num_to_prop) :
+    PropertyStateMachine(const std::unordered_map<int, pass_prop>& num_to_prop) :
     num_to_prop_(num_to_prop)
     {}
 
     int apply_pass(int pass)
     {
         passes_.push_back(pass);
-        properties pass_prop = num_to_prop_.at(pass);
+        pass_prop pass_prop = num_to_prop_.at(pass);
 
         if ((property_state & pass_prop.required) != pass_prop.required)
         {
@@ -44,10 +45,10 @@ struct PropertyStateMachine
         return 0;
     }
 
-    void report_failure(int pass_num, const properties& pass_prop)
+    void report_failure(int pass_num, const pass_prop& pass_prop)
     {
         std::cerr << "Pass # " << passes_.size() << " with id:" << pass_num << " application failed due to current state being: " << std::hex << property_state
-        << " and this pass requires at least folowing properties: " << pass_prop.required << std::endl;
+        << " and this pass requires at least folowing original and custom properties: " << std::hex << pass_prop.required << std::endl;
     }
 };
 
