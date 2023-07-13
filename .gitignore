@@ -7,4 +7,5 @@ shuffle
 list1.txt
 list2.txt
 list3.txt
-benches/datasets/*
+benches/**/datasets
+diff_templates/*
