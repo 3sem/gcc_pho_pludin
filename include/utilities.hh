@@ -15,6 +15,7 @@ struct properties
     unsigned long required = 0;
     unsigned long provided = 0;
     unsigned long destroyed = 0;
+
 };
 
 inline bool operator==(const properties& lhs, const properties& rhs)
@@ -24,25 +25,26 @@ inline bool operator==(const properties& lhs, const properties& rhs)
            (lhs.destroyed == rhs.destroyed);
 }
 
-inline bool operator!=(const properties& lhs, const properties& rhs)
+struct pass_prop
 {
-    return !(lhs == rhs);
+    properties original;
+    properties custom;
+};
+
+inline bool operator==(const pass_prop& lhs, const pass_prop& rhs)
+{
+    return (lhs.original == rhs.original) && (lhs.custom == rhs.custom);
 }
 
 struct pass_info
 {
     std::string name;
-    properties prop;
+    pass_prop prop;
 };
 
 inline bool operator==(const pass_info& lhs, const pass_info& rhs)
 {
     return (lhs.name == rhs.name) && (lhs.prop == rhs.prop);
-}
-
-inline bool operator!=(const pass_info& lhs, const pass_info& rhs)
-{
-    return !(lhs == rhs);
 }
 
 namespace std
@@ -54,9 +56,9 @@ namespace std
         std::size_t operator()(const pass_info& info) const
         {
             std::size_t h1 = std::hash<std::string>{}(info.name);
-            std::size_t h2 = info.prop.destroyed << 1;
-            std::size_t h3 = info.prop.provided << 2;
-            std::size_t h4 = info.prop.required << 3;
+            std::size_t h2 = std::hash<std::string>{}(info.prop.custom.required + info.prop.original.required) << 1;
+            std::size_t h3 = std::hash<std::string>{}(info.prop.custom.required + info.prop.original.required) << 2;
+            std::size_t h4 = std::hash<std::string>{}(info.prop.custom.required + info.prop.original.required) << 3;
             return h1 ^ h2 ^ h3 ^ h4;
         }
     };
