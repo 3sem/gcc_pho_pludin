@@ -164,62 +164,68 @@ struct PassListGenerator
     // the shuffling itself
     void shuffle_pass_order(unsigned long initial_property_state)
     {
-        shuffled_passes.clear();
-        generate_prop_passes_map();
-
+        int TRY_AMOUNT = 1e4;
         PropertyStateMachine state(pass_to_properties_);
-        state.property_state = initial_property_state;
 
-        std::random_device rd;
-        std::mt19937 gen(rd());
-
-        std::vector<int> passes_to_choose_from;
-        passes_to_choose_from.reserve(MAX_PASS_AMOUNT);
-
-
-        for (int i = 0; i < pass_vec_.size(); i++)
+        for (int i = 0; (i < TRY_AMOUNT) && (state.passes_.size() != pass_vec_.size()); i++)
         {
-            auto&& property_state = state.property_state;
-            for (auto&& it : get_unique_requirements(info_vec_.begin(), info_vec_.end()))
+            state.passes_.clear();
+            unique_requirement_to_passes_.clear();
+            shuffled_passes.clear();
+            generate_prop_passes_map();
+
+            state.property_state = initial_property_state;
+
+            std::random_device rd;
+            std::mt19937 gen(rd());
+
+            std::vector<int> passes_to_choose_from;
+            passes_to_choose_from.reserve(MAX_PASS_AMOUNT);
+
+
+            for (int i = 0; i < pass_vec_.size(); i++)
             {
-                if (((property_state & it) == it) && !unique_requirement_to_passes_[it].empty())
+                auto&& property_state = state.property_state;
+                for (auto&& it : get_unique_requirements(info_vec_.begin(), info_vec_.end()))
                 {
-                    auto&& old_size = passes_to_choose_from.size();
-                    passes_to_choose_from.resize(passes_to_choose_from.size() + unique_requirement_to_passes_[it].size());
-                    std::copy(unique_requirement_to_passes_[it].begin(), unique_requirement_to_passes_[it].end(),
-                              passes_to_choose_from.begin() + old_size);
+                    if (((property_state & it) == it) && !unique_requirement_to_passes_[it].empty())
+                    {
+                        auto&& old_size = passes_to_choose_from.size();
+                        passes_to_choose_from.resize(passes_to_choose_from.size() + unique_requirement_to_passes_[it].size());
+                        std::copy(unique_requirement_to_passes_[it].begin(), unique_requirement_to_passes_[it].end(),
+                                passes_to_choose_from.begin() + old_size);
+                    }
+                }
+
+                if (passes_to_choose_from.empty())
+                    break;
+
+                std::uniform_int_distribution<> to_get_index(0, passes_to_choose_from.size() - 1);
+
+                int position_of_chosen_pass = to_get_index(gen);
+                int chosen_pass = passes_to_choose_from[position_of_chosen_pass];
+                state.apply_pass(chosen_pass);
+
+                passes_to_choose_from.clear();
+
+                auto&& to_erase_used_pass_from = unique_requirement_to_passes_[pass_to_properties_.at(chosen_pass).required];
+                to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
+
+            }
+
+            for (auto&& iter : state.passes_)
+            {
+                auto&& it = id_to_pass_batch.find(iter);
+                if (it != id_to_pass_batch.end())
+                {
+                    for (auto&& pass_batch_iter : it->second)
+                        shuffled_passes.push_back(pass_batch_iter);
+                }
+                else
+                {
+                    shuffled_passes.push_back(id_to_name[iter]);
                 }
             }
-
-            if (passes_to_choose_from.empty())
-                break;
-
-            std::uniform_int_distribution<> to_get_index(0, passes_to_choose_from.size() - 1);
-
-            int position_of_chosen_pass = to_get_index(gen);
-            int chosen_pass = passes_to_choose_from[position_of_chosen_pass];
-            state.apply_pass(chosen_pass);
-
-            passes_to_choose_from.clear();
-
-            auto&& to_erase_used_pass_from = unique_requirement_to_passes_[pass_to_properties_.at(chosen_pass).required];
-            to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
-
-        }
-
-        for (auto&& iter : state.passes_)
-        {
-            auto&& it = id_to_pass_batch.find(iter);
-            if (it != id_to_pass_batch.end())
-            {
-                for (auto&& pass_batch_iter : it->second)
-                    shuffled_passes.push_back(pass_batch_iter);
-            }
-            else
-            {
-                shuffled_passes.push_back(id_to_name[iter]);
-            }
-
         }
 
     }
