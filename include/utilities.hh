@@ -84,16 +84,22 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
         return 0;
     }
 
-    auto constr_it = constraint_buf.begin();
-    auto line_end = constr_it;
+    auto line_start = constraint_buf.begin();
+    auto line_end = line_start;
     unsigned long add_starting_state = 0;
 
-    for (unsigned long requirement = 1 << 18; (constr_it != constraint_buf.end()) && (line_end != constraint_buf.end()); constr_it++)
+    for (unsigned long requirement = 1 << 18; (line_start != constraint_buf.end()) && (line_end != constraint_buf.end()); line_start++)
     {
-        line_end = std::find(constr_it, constraint_buf.end(), '\n');
+        if ((*line_start) == '#')
+        {
+            line_start = std::find(line_start, constraint_buf.end(), '\n');
+            continue;
+        }
+        if (((*line_start) == '\n') || ((*line_start) == ' '))
+            continue;
 
-        std::vector<std::string> line_of_passes = get_passes_seq(constr_it, line_end);
-
+        line_end = std::find(line_start, constraint_buf.end(), '\n');
+        std::vector<std::string> line_of_passes = get_passes_seq(line_start, line_end);
 
         auto line_iter = line_of_passes.begin();
         auto second_line_iter = ++line_of_passes.begin();
@@ -118,7 +124,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
             second_pass->prop.required |= requirement;
             requirement = requirement << 1;
         }
-        constr_it = line_end;
+        line_start = line_end;
     }
 
     return add_starting_state;

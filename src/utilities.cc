@@ -15,7 +15,7 @@ std::string get_file_text(const std::string& file_name)
 
 std::pair<unsigned long, std::string::const_iterator> find_number(std::string::const_iterator begin, const std::string& str)
 {
-    auto&& is_digit = [](const char c){return isdigit(c); };
+    auto&& is_digit = [](const char c){return std::isdigit(c); };
     begin = std::find_if(begin, str.end(), is_digit);
     auto&& end = std::find_if_not(begin, str.end(), is_digit);
 
@@ -28,7 +28,7 @@ std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::
     auto it = begin;
     auto second_it = begin;
 
-    for (; (it != end) && (second_it != end); it++)
+    for (; (it != end) && (second_it != end);)
     {
         second_it = std::find_if(it, end, [](const char c){ return c == ' ';});
         auto&& pass_name = std::string{it, second_it};
@@ -39,7 +39,7 @@ std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::
         }
         pass_vec.push_back(pass_name);
 
-        it = second_it;
+        it = std::find_if(second_it, end, [](const char c){ return std::isalpha(c) || (c == '!'); });
     }
 
     return pass_vec;
