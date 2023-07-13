@@ -72,12 +72,14 @@ std::vector<pass_info> parse_log(const std::string& info_file_name)
         auto&& prov_iter_pair = find_number(req_iter_pair.second, buf);
         auto&& destr_iter_pair = find_number(prov_iter_pair.second, buf);
 
-        info.prop = {req_iter_pair.first, prov_iter_pair.first, destr_iter_pair.first};
-        info_vec.push_back(info);
+        info.prop = {{req_iter_pair.first, prov_iter_pair.first, destr_iter_pair.first}, {0, 0, 0}};
 
         iter = second_iter = destr_iter_pair.second;
+        if (info.name == "rtl")
+            continue;
+        info_vec.push_back(info);
     }
-    info_vec.push_back({"rtl pre", {512, 0, 0}});
+    info_vec.push_back({"rtl pre", {{512, 0, 0}, {0, 0, 0}}});
 
     return info_vec;
 }

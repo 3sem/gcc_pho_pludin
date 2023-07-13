@@ -56,9 +56,9 @@ namespace std
         std::size_t operator()(const pass_info& info) const
         {
             std::size_t h1 = std::hash<std::string>{}(info.name);
-            std::size_t h2 = std::hash<std::string>{}(info.prop.custom.required + info.prop.original.required) << 1;
-            std::size_t h3 = std::hash<std::string>{}(info.prop.custom.required + info.prop.original.required) << 2;
-            std::size_t h4 = std::hash<std::string>{}(info.prop.custom.required + info.prop.original.required) << 3;
+            std::size_t h2 = std::hash<unsigned long>{}(info.prop.custom.required + info.prop.original.required) << 1;
+            std::size_t h3 = std::hash<unsigned long>{}(info.prop.custom.required + info.prop.original.required) << 2;
+            std::size_t h4 = std::hash<unsigned long>{}(info.prop.custom.required + info.prop.original.required) << 3;
             return h1 ^ h2 ^ h3 ^ h4;
         }
     };
@@ -75,10 +75,10 @@ std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::
 template <typename iter>
 unsigned long parse_constraints(iter begin, iter end, const std::string& constraint_file_name)
 {
-    std::string constraint_buf;
+    std::string buf;
     try
     {
-        constraint_buf = get_file_text(constraint_file_name);
+        buf = get_file_text(constraint_file_name);
     }
     catch(const std::ios_base::failure& exc)
     {
@@ -86,41 +86,26 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
         return 0;
     }
 
-    auto constr_it = constraint_buf.begin();
-    auto line_end = constr_it;
     unsigned long add_starting_state = 0;
 
-    for (unsigned long requirement = 1 << 18; (constr_it != constraint_buf.end()) && (line_end != constraint_buf.end()); constr_it++)
+    auto second_it = buf.cbegin();
+    for (auto it = buf.cbegin(); (it != buf.cend()) && (second_it != buf.cend()); it++)
     {
-        line_end = std::find(constr_it, constraint_buf.end(), '\n');
+        pass_info info;
+        second_it = std::find_if(it, buf.cend(), [](const char c){ return c == ' ';});
 
-        std::vector<std::string> line_of_passes = get_passes_seq(constr_it, line_end);
+        info.name = std::string(it, second_it);
+        if (info.name == "rtl")
+            info.name.append(" pre");
 
+        auto&& req_iter_pair = find_number(second_it, buf);
+        auto&& prov_iter_pair = find_number(req_iter_pair.second, buf);
+        auto&& destr_iter_pair = find_number(prov_iter_pair.second, buf);
 
-        auto line_iter = line_of_passes.begin();
-        auto second_line_iter = ++line_of_passes.begin();
-        for (; second_line_iter != line_of_passes.end(); line_iter++, second_line_iter++ )
-        {
-            auto first_pass = std::find_if(begin, end,
-                                           [&name = *line_iter](const pass_info& elem){return elem.name == name;});
-            if (*second_line_iter == "!")
-            {
-                second_line_iter++;
-                line_iter++;
-                first_pass->prop.destroyed |= requirement;
-                add_starting_state |= requirement;
-            }
-            else
-            {
-                first_pass->prop.provided |= requirement;
-            }
-            auto second_pass = std::find_if(begin, end,
-                                            [&name = *second_line_iter](const pass_info& elem){return elem.name == name;});
+        auto&& to_fill_constraint_it = std::find_if(begin, end, [&name = info.name](const pass_info& info){ return name == info.name;});
+        to_fill_constraint_it->prop.custom = {req_iter_pair.first, prov_iter_pair.first, destr_iter_pair.first};
 
-            second_pass->prop.required |= requirement;
-            requirement = requirement << 1;
-        }
-        constr_it = line_end;
+        it = second_it = destr_iter_pair.second;
     }
 
     return add_starting_state;

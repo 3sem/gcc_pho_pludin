@@ -2,18 +2,18 @@
 // #include "driver.hh"
 #include "utilities.hh"
 
+const char standart_pass_decription_file[] = "unique_passes.txt";
+
 
 int main(int argc, char* argv[])
 {
-    // std::string to_shuffle_file = standart_pass_to_shuffle_file;
-    // std::string constraints_file = "lists/constraints.txt";
-    // if (argc >= 2)
-    // {
-    //     to_shuffle_file = argv[1];
-    //     if (argc >= 3)
-    //         constraints_file = argv[2];
-    // }
+    auto&& info_vec{parse_log(standart_pass_decription_file)};
 
-    // Driver driver(standart_pass_decription_file, constraints_file);
-    // driver.generate_file_with_shuffle(to_shuffle_file);
+    parse_constraints(info_vec.begin(), info_vec.end(), "lists/constraints.txt");
+
+    for (auto&& it : info_vec)
+    {
+        std::cout << it.name << ' ' << it.prop.original.required << ' ' << it.prop.original.provided << ' ' << it.prop.original.destroyed 
+        << ' ' << it.prop.custom.required << ' ' << it.prop.custom.provided << ' ' << it.prop.custom.destroyed << std::endl;
+    }
 }
