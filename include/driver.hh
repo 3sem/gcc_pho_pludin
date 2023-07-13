@@ -46,8 +46,11 @@ public:
             std::vector<std::string> loop_passes{parse_passes_file("lists/to_shuffle4.txt")};
             if (!shuffle_only_one)
             {
-                PassListGenerator gen_loop_list {info_vec.begin(), info_vec.end(), loop_passes.begin(), loop_passes.end()};
-                gen_loop_list.shuffle_pass_order(custom_start_state | list_to_starting_property["lists/to_shuffle4.txt"]);
+                std::vector<pass_info> loop_info_vec{parse_log(descript_file_)};
+                unsigned long custom_start_state_loop = parse_constraints(loop_info_vec.begin(), loop_info_vec.end(), "lists/constraints4.txt");
+
+                PassListGenerator gen_loop_list {loop_info_vec.begin(), loop_info_vec.end(), loop_passes.begin(), loop_passes.end()};
+                gen_loop_list.shuffle_pass_order(custom_start_state_loop | list_to_starting_property["lists/to_shuffle4.txt"]);
 
                 // std::vector<std::string> shuffled_list4 {gen_loop_list.begin(), gen_loop_list.end()};
                 // shuffled_list4.push_back("loopdone");
