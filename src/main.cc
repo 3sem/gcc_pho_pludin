@@ -1,8 +1,6 @@
-// #include "state_machine.hh"
+#include "state_machine.hh"
 // #include "driver.hh"
 #include "utilities.hh"
-
-const char standart_pass_decription_file[] = "unique_passes.txt";
 
 
 int main(int argc, char* argv[])

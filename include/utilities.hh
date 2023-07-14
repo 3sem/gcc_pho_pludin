@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <utility>
 #include <vector>
 #include <algorithm>
 
@@ -62,6 +63,18 @@ namespace std
             return h1 ^ h2 ^ h3 ^ h4;
         }
     };
+
+    template<>
+    struct hash<std::pair<unsigned long, unsigned long>>
+    {
+        typedef std::pair<unsigned long, unsigned long> argument_type;
+        std::size_t operator()(const argument_type& pair) const
+        {
+            std::size_t h1 = std::hash<unsigned long>{}(pair.first);
+            std::size_t h2 = std::hash<unsigned long>{}(pair.second) << 1;
+            return h1 ^ h2;
+        }
+    };
 }
 
 
@@ -112,12 +125,12 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
 }
 
 template <typename iter>
-std::unordered_set<long> get_unique_requirements(iter begin, iter end)
+std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requirements(iter begin, iter end)
 {
-    std::unordered_set<long> unique_requirements;
+    std::unordered_set<std::pair<unsigned long, unsigned long>> unique_requirements;
     for (; begin != end; begin++)
     {
-        unique_requirements.insert(begin->prop.required);
+        unique_requirements.insert({begin->prop.original.required, begin->prop.custom.required});
     }
 
     return unique_requirements;
