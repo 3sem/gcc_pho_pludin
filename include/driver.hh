@@ -61,8 +61,8 @@ public:
     int generate_shuffled_list2()
     {
         static constexpr unsigned long FIRST_PART_START_PROP = 76079;
-        static constexpr unsigned long SECOND_PART_START_PROP = 76079;
-        static constexpr unsigned long LOOP_START_PROP = 126255;
+        static constexpr unsigned long SECOND_PART_START_PROP = FIRST_PART_START_PROP | (1 << 14) | (1 << 10) | (1 << 15);
+        static constexpr unsigned long LOOP_START_PROP = SECOND_PART_START_PROP;
 
         std::string constraints_file_first_part = "lists/constraints2_1.txt";
         std::string constraints_file_second_part = "lists/constraints2_1.txt";
