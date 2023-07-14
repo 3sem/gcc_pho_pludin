@@ -47,22 +47,20 @@ HEADER_DIR = include
 
 CXXFLAGS += -I$(HEADER_DIR)
 
-SRC_DIR = src
 SOURCES = main.cc utilities.cc
 SRC := $(addprefix $(SRC_DIR)/, $(SOURCES))
 
-OBJ = $(SOURCES:.cc=.o)
+OBJECTS = $(SOURCES:.cc=.o)
+OBJ_DIR = obj
+OBJ := $(addprefix $(OBJ_DIR)/, $(OBJECTS))
 
 EXEC = shuffle
 
-all: $(EXEC)
-
-%.o : $(SRC_DIR)/%.cc
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(EXEC): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(EXEC)
-	rm *.o
 
 shuffle1 : $(EXEC)
 	./$(EXEC) lists/to_shuffle1.txt
@@ -83,7 +81,8 @@ $(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/st
 
 $(OBJ_DIR)/utilities.o: src/utilities.cc include/utilities.hh
 
-clean:
-	rm *.o
+clean_obj:
+	rm $(OBJ_DIR)/*.o
 
--include .depend
+clean_bad_lists:
+	rm -r broken_lists/*
