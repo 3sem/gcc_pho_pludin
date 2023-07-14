@@ -1,0 +1,4 @@
+auto_inc_dec ! cse2
+auto_inc_dec ! cprop
+cse1 cse2
+fwprop1 fwprop2
