@@ -162,6 +162,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
 
         to_fill_constraint_it->prop.custom.required  |= req_iter_pair.first;
         to_fill_constraint_it->prop.custom.provided  |= prov_iter_pair.first;
+        to_fill_constraint_it->prop.custom.provided  &= ~destr_iter_pair.first;
         to_fill_constraint_it->prop.custom.destroyed |= destr_iter_pair.first;
 
         // std::cout << "Got: " << info.name << ' ' << req_iter_pair.first << ' ' << prov_iter_pair.first << ' ' << destr_iter_pair.first << std::endl;
