@@ -33,7 +33,7 @@ struct PropertyStateMachine
         starting.required |= to_apply.required;
 
         starting.provided |= to_apply.provided;
-        starting.provided &= to_apply.destroyed;
+        starting.provided &= ~to_apply.destroyed;
         starting.destroyed |= to_apply.destroyed;
     }
 
@@ -171,6 +171,8 @@ struct PassListGenerator
                 PropertyStateMachine::compress_pass_prop(prop_for_batch, pass_info_it->prop);
             }
 
+            info_vec_.push_back({std::string{"batch_"} + pass_batches_names_vec[k].back(), prop_for_batch});
+
             pass_batches_prop_vec.push_back(prop_for_batch);
         }
 
@@ -201,11 +203,9 @@ struct PassListGenerator
     }
 
     // the shuffling itself
-    int shuffle_pass_order(std::pair<unsigned long, unsigned long> initial_property_state)
+    int shuffle_pass_order(const std::pair<unsigned long, unsigned long>& initial_property_state)
     {
         PropertyStateMachine state(pass_to_properties_);
-        state.original_property_state = initial_property_state.first;
-        state.custom_property_state = initial_property_state.second;
 
         for (int i = 0; (i < TRY_AMOUNT) && (state.passes_.size() != pass_vec_.size()); i++)
         {
@@ -214,15 +214,18 @@ struct PassListGenerator
             shuffled_passes.clear();
             generate_prop_passes_map();
     
-            auto&& property_state = std::pair{state.original_property_state, state.custom_property_state};
+            state.original_property_state = initial_property_state.first;
+            state.custom_property_state = initial_property_state.second;
 
             std::random_device rd;
             std::mt19937 gen(rd());
 
             std::vector<int> passes_to_choose_from;
             passes_to_choose_from.reserve(MAX_PASS_AMOUNT);
+
             for (int i = 0; i < pass_vec_.size(); i++)
             {
+                auto&& property_state = std::pair{state.original_property_state, state.custom_property_state};
                 for (auto&& it : get_unique_requirements(info_vec_.begin(), info_vec_.end()))
                 {
                     if (((property_state.first & it.first) == it.first) && ((property_state.second & it.second) == it.second) &&

@@ -26,10 +26,10 @@ public:
     {
         std::vector<pass_info> info_vec{parse_log(descript_file_)};
         unsigned long custom_start_state = parse_constraints(info_vec.begin(), info_vec.end(), constraints_file);
+        // for (auto&& it : info_vec)
+        //     std::cout << it.name << ' ' << it.prop.original.required << ' ' << it.prop.original.provided << ' ' << it.prop.original.destroyed <<
+        //     ' ' << it.prop.custom.required << ' ' << it.prop.custom.provided << ' ' << it.prop.custom.destroyed << std::endl;
         gen.set_info_vec(info_vec.begin(), info_vec.end());
-
-        // for (auto&& it : gen.info_vec_)
-        //     std::cout << it.name << ' ' << it.prop.required << ' ' << it.prop.provided << ' ' << it.prop.destroyed << std::endl;
 
         return custom_start_state;
     }
@@ -48,9 +48,17 @@ public:
         std::string constraints_file = std::string{"lists/constraints"} + std::string{list_num, to_shuffle_file.end()};
         unsigned long custom_start_state = fill_gen_info_vec(constraints_file);
         fill_gen_pass_vec(to_shuffle_file);
+
+        // for (auto&& it : gen.info_vec_)
+        //     std::cout << it.name << ' ' << it.prop.original.required << ' ' << it.prop.original.provided << ' ' << it.prop.original.destroyed <<
+        //     ' ' << it.prop.custom.required << ' ' << it.prop.custom.provided << ' ' << it.prop.custom.destroyed << std::endl;
+
+        // for (auto&& it : gen.pass_vec_)
+        //     std::cout << it << std::endl;
+
         gen.get_pass_name_to_id_maps();
 
-        int failed = gen.shuffle_pass_order(custom_start_state | starting_prop);
+        int failed = gen.shuffle_pass_order({starting_prop, custom_start_state});
         if (failed)
                 return PassListGenerator::COULD_NOT_GEN;
 

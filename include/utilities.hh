@@ -99,10 +99,16 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
         return 0;
     }
 
-    unsigned long add_starting_state = 0;
+    if (buf.empty())
+        return 0;
 
-    auto second_it = buf.cbegin();
-    for (auto it = buf.cbegin(); (it != buf.cend()) && (second_it != buf.cend()); it++)
+    auto&& it_and_start_state = find_number(buf.cbegin(), buf);
+    auto it = it_and_start_state.second;
+    unsigned long add_starting_state = it_and_start_state.first;
+
+    auto second_it = it;
+    it++;
+    for (; (it != buf.cend()) && (second_it != buf.cend()); it++)
     {
         pass_info info;
         second_it = std::find_if(it, buf.cend(), [](const char c){ return c == ' ';});
