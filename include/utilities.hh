@@ -141,7 +141,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
 
         auto&& to_fill_constraint_it = std::find_if(begin, end, [&name = info.name](const pass_info& info){ return name == info.name;});
         to_fill_constraint_it->prop.custom = {req_iter_pair.first, prov_iter_pair.first, destr_iter_pair.first};
-        std::cout << "Got: " << info.name << ' ' << req_iter_pair.first << ' ' << prov_iter_pair.first << ' ' << destr_iter_pair.first << std::endl;
+        // std::cout << "Got: " << info.name << ' ' << req_iter_pair.first << ' ' << prov_iter_pair.first << ' ' << destr_iter_pair.first << std::endl;
 
         it = second_it = destr_iter_pair.second;
     }
