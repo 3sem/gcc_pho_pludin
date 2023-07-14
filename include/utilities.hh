@@ -131,9 +131,9 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
 }
 
 template <typename iter>
-std::unordered_set<long> get_unique_requirements(iter begin, iter end)
+std::unordered_set<unsigned long> get_unique_requirements(iter begin, iter end)
 {
-    std::unordered_set<long> unique_requirements;
+    std::unordered_set<unsigned long> unique_requirements;
     for (; begin != end; begin++)
     {
         unique_requirements.insert(begin->prop.required);
