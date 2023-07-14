@@ -102,15 +102,33 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
     if (buf.empty())
         return 0;
 
+    auto it = buf.cbegin();
+    auto second_it = it;
+    while((it = std::find(it, buf.cend(), '#')) != buf.cend())
+    {
+        second_it = std::find(it, buf.cend(), '\n');
+        it = second_it;
+    }
+    it = ++second_it; // it after not finding another comment is at buf.cend, and second_it is at end of comment. So we se them both to next
+
     auto&& it_and_start_state = find_number(buf.cbegin(), buf);
-    auto it = it_and_start_state.second;
+    second_it = it = it_and_start_state.second;
     unsigned long add_starting_state = it_and_start_state.first;
 
-    auto second_it = it;
     it++;
     for (; (it != buf.cend()) && (second_it != buf.cend()); it++)
     {
+        if (*it == ' ' || *it == '\n')
+            continue;
+        if (*it == '#')
+        {
+            it = std::find(it, buf.cend(), '\n');
+            second_it = it;
+            continue;
+        }
+
         pass_info info;
+        it = std::find_if(it, buf.cend(), [](const char c){ return isalpha(c);});
         second_it = std::find_if(it, buf.cend(), [](const char c){ return c == ' ';});
 
         info.name = std::string(it, second_it);
@@ -123,6 +141,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
 
         auto&& to_fill_constraint_it = std::find_if(begin, end, [&name = info.name](const pass_info& info){ return name == info.name;});
         to_fill_constraint_it->prop.custom = {req_iter_pair.first, prov_iter_pair.first, destr_iter_pair.first};
+        std::cout << "Got: " << info.name << ' ' << req_iter_pair.first << ' ' << prov_iter_pair.first << ' ' << destr_iter_pair.first << std::endl;
 
         it = second_it = destr_iter_pair.second;
     }
