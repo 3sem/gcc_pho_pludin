@@ -1,0 +1,11 @@
+# These passes break something needed by pre
+crited ! vrp
+crited ! fre
+crited ! copyprop
+crited ! ccp
+crited ! dom
+crited ! dce
+crited ! ch
+crited ! phicprop
+crited ! thread
+vrp ! copyprop

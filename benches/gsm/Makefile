@@ -18,6 +18,8 @@ test_lists: shuffled.out $(addprefix ../../, list1.txt list2.txt list3.txt) $(OU
 	$(QEMU) $(QEMU_ARG) ./shuffled.out -d -k -c $(DATASET) > $(OUT_DIR)/shuffled_unpacked
 	cmp $(OUT_DIR)/shuffled_unpacked $(OUT_DIR)/base_unpacked
 
+test_list2_break: test_list2
+
 test_list%: shuffled%.out $(addprefix ../../, list%.txt) $(OUT_DIR)/base_unpacked
 	$(QEMU) $(QEMU_ARG) ./$< -ps -c $(DATASET) > $(OUT_DIR)/shuffled_unpacked
 	cmp $(OUT_DIR)/shuffled_unpacked $(OUT_DIR)/base_unpacked
