@@ -1,17 +1,28 @@
 #include "state_machine.hh"
-// #include "driver.hh"
-#include "utilities.hh"
-
+#include "driver.hh"
+#include <string_view>
 
 int main(int argc, char* argv[])
 {
-    auto&& info_vec{parse_log(standart_pass_decription_file)};
-
-    parse_constraints(info_vec.begin(), info_vec.end(), "lists/constraints.txt");
-
-    for (auto&& it : info_vec)
+    std::string to_shuffle_file = standart_pass_to_shuffle_file;
+    bool breakdown_second_list = true;
+    if (argc >= 2)
     {
-        std::cout << it.name << ' ' << it.prop.original.required << ' ' << it.prop.original.provided << ' ' << it.prop.original.destroyed 
-        << ' ' << it.prop.custom.required << ' ' << it.prop.custom.provided << ' ' << it.prop.custom.destroyed << std::endl;
+        to_shuffle_file = argv[1];
+        if (argc >= 3)
+        {
+            if (std::string_view{argv[2]} == std::string_view{"break"})
+                breakdown_second_list = true;
+            else if (std::string_view{argv[2]} == std::string_view{"nobreak"})
+                breakdown_second_list = false;
+        }
     }
+
+    Driver driver(standart_pass_decription_file);
+
+    if (to_shuffle_file == "lists/to_shuffle2.txt")
+        driver.set_if_breakdown_list2(breakdown_second_list);
+    driver.set_if_shuffle_multiple(false);
+
+    return driver.generate_file_with_shuffle(to_shuffle_file);
 }
