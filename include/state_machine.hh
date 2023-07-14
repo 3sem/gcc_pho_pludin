@@ -30,6 +30,8 @@ struct PropertyStateMachine
     num_to_prop_(num_to_prop)
     {}
 
+    // Compresses two sets of properties into one equivalent
+    // The result is written into starting
     static void compress_property(properties& starting, const properties& to_apply)
     {
         starting.required |= to_apply.required;
@@ -39,6 +41,8 @@ struct PropertyStateMachine
         starting.destroyed |= to_apply.destroyed;
     }
 
+    // Compresses two sets of pass properties into one equivalent
+    // The result is written into starting
     static void compress_pass_prop(pass_prop& starting, const pass_prop& to_apply)
     {
         compress_property(starting.original, to_apply.original);
@@ -75,9 +79,10 @@ struct PropertyStateMachine
 };
 
 
-// This class gets a range of passes' names and properties fields (required / provided / destroyed) and range of passes names to be shuffled
-// It build a hash map : property state -> vector of avaible passes
-// Then, using PropertyState, built earlier hash map generates random sequence of given earlier passes
+// This class gets a range of passes' names and properties fields (required / provided / destroyed, original and custom) and range of passes names to be shuffled
+// It then builds hash maps: unique property requirement -> all passes that require it
+// Then, using PropertyStateMachine, and built earlier hash map it fills a vector of passes that could be taken as next in generated sequence
+// and chooses one randomly from this vector
 struct PassListGenerator
 {
     std::vector<pass_info> info_vec_;
@@ -87,10 +92,11 @@ struct PassListGenerator
     std::unordered_map<std::pair<unsigned long, unsigned long>, std::vector<int>> unique_requirement_to_passes_;
 
     std::vector<std::string> pass_vec_; // vector of passes to shuffle
-    std::unordered_map<int, std::vector<std::string>> id_to_pass_batch;
+    std::unordered_map<int, std::vector<std::string>> id_to_pass_batch; // some passes have to be together in resulting sequence, so we combine them into batches
+                                                                        // give them the same id
     std::unordered_map<int, std::string> id_to_name;
 
-    std::vector<std::string> shuffled_passes;
+    std::vector<std::string> shuffled_passes; // resulting shuffled passes sequence
 
     bool fail_if_not_all_passes_used = true;
 
@@ -122,6 +128,7 @@ struct PassListGenerator
         pass_vec_ = {begin, end};
     }
 
+    // Give a batch of passes a single id
     template <typename iter>
     void get_pass_batch_to_id(iter begin, iter end, int id, const pass_prop& prop, const std::string& batch_name)
     {
@@ -131,6 +138,7 @@ struct PassListGenerator
         pass_to_properties_[id] = prop;
     }
 
+    // leave a single pass from each batch in passes to reorder vector
     template <typename iter>
     void erase_repeating(iter begin, iter end)
     {
@@ -142,7 +150,7 @@ struct PassListGenerator
         }
     }
 
-    // map passes' names onto ids
+    // map passes' names onto ids and batches of passes onto ids
     void get_pass_name_to_id_maps()
     {
         int i = 0;
@@ -173,6 +181,8 @@ struct PassListGenerator
                 PropertyStateMachine::compress_pass_prop(prop_for_batch, pass_info_it->prop);
             }
 
+            // we place a combined pass property struct of whole batch into info_vec so that the function that generates unique requirements set would also
+            // include the generated batches requirements
             info_vec_.push_back({std::string{"batch_"} + pass_batches_names_vec[k].back(), prop_for_batch});
 
             pass_batches_prop_vec.push_back(prop_for_batch);
@@ -187,7 +197,7 @@ struct PassListGenerator
         }
     }
 
-    // create a hash map : property state -> vector of avaible passes (pool of passes that could be used is defined by given range of passes to shufle)
+    // create a hash map : unique requirement -> all passes (from given range to reorder) that require it
     void generate_prop_passes_map()
     {
         auto&& unique_requirements = get_unique_requirements(info_vec_.begin(), info_vec_.end());
@@ -209,8 +219,15 @@ struct PassListGenerator
     {
         PropertyStateMachine state(pass_to_properties_);
 
+        // Sometimes due to properties restrictions in given range of passes some pass1 cannot be after pass2; and if pass1 is taken before pass2
+        // pass2 wont be in resulting sequence at all
+        // we try to avoid this, so TRY_AMOUNT tries are made, so that in resulting sequence there would be all passes
+        //
+        // There is a flag fail_if_not_all_passes_used, which determines, whether the generation o sequence fails alltogether, if all sequence with all
+        // passes could be generated, or just the last sequence is left as resulting
         for (int i = 0; (i < TRY_AMOUNT) && (state.passes_.size() != pass_vec_.size()); i++)
         {
+            // clear the previously generated sequence if there was one
             state.passes_.clear();
             unique_requirement_to_passes_.clear();
             shuffled_passes.clear();
@@ -228,11 +245,15 @@ struct PassListGenerator
             for (int i = 0; i < pass_vec_.size(); i++)
             {
                 auto&& property_state = std::pair{state.original_property_state, state.custom_property_state};
+
+                // fill vector of available passes
                 for (auto&& it : get_unique_requirements(info_vec_.begin(), info_vec_.end()))
                 {
+                    // check if passes requirements are mets
                     if (((property_state.first & it.first) == it.first) && ((property_state.second & it.second) == it.second) &&
                         !unique_requirement_to_passes_[it].empty())
                     {
+                        // copy all passes with given requirement into vector of passes to choose from
                         auto&& old_size = passes_to_choose_from.size();
                         passes_to_choose_from.resize(passes_to_choose_from.size() + unique_requirement_to_passes_[it].size());
                         std::copy(unique_requirement_to_passes_[it].begin(), unique_requirement_to_passes_[it].end(),
@@ -243,13 +264,14 @@ struct PassListGenerator
                 if (passes_to_choose_from.empty())
                     break;
 
+                // choose a pass randomly
                 std::uniform_int_distribution<> to_get_index(0, passes_to_choose_from.size() - 1);
-
 
                 int position_of_chosen_pass = to_get_index(gen);
                 int chosen_pass = passes_to_choose_from[position_of_chosen_pass];
                 state.apply_pass(chosen_pass);
 
+                // reset available passes and erase used pass from pool of all passes to reorder
                 passes_to_choose_from.clear();
                 auto&& properties_of_chosen = pass_to_properties_.at(chosen_pass);
 
@@ -257,6 +279,7 @@ struct PassListGenerator
                 to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
             }
 
+            // map from resulting sequence of passes ids back to names
             for (auto&& iter : state.passes_)
             {
                 auto&& it = id_to_pass_batch.find(iter);
@@ -278,6 +301,7 @@ struct PassListGenerator
         return 0;
     }
 
+    // Verify a sequence from file_name
     void verify(std::pair<unsigned long, unsigned long> initial_property_state, const std::string& file_name)
     {
         std::vector<std::string> passes{parse_passes_file(file_name)};
