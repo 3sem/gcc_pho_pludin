@@ -76,6 +76,8 @@ struct PassListGenerator
     static constexpr int MAX_PASS_AMOUNT = 250;
     static constexpr int TRY_AMOUNT = 1e4;
 
+    PassListGenerator() = default;
+
     template <typename iter_info, typename iter_name>
     PassListGenerator(iter_info begin_info, iter_info end_info, iter_name begin_name, iter_name end_name) : 
         info_vec_{begin_info, end_info}, pass_vec_{begin_name, end_name}
@@ -84,6 +86,18 @@ struct PassListGenerator
     }
 
     void set_fail_gen_flag (bool flag) { fail_if_not_all_passes_used = flag; }
+
+    template <typename iter>
+    void set_info_vec(iter begin, iter end)
+    {
+        info_vec_ = {begin, end};
+    }
+
+    template <typename iter>
+    void set_passes_vec(iter begin, iter end)
+    {
+        pass_vec_ = {begin, end};
+    }
 
     template <typename iter>
     void get_pass_batch_to_id(iter begin, iter end, int id, const properties& prop, const std::string& batch_name)

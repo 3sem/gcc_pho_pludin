@@ -35,10 +35,13 @@ test_list1: plugin.so shuffle1
 test_list2: plugin.so shuffle2 
 	make -C ./benches/bzip2d test_list2
 
+test_list2_break: plugin.so shuffle2_break
+	make -C ./benches/bzip2d test_list2
+
 test_list3: plugin.so shuffle3
 	make -C ./benches/bzip2d test_list3
 
-CXXFLAGS = -std=c++2a
+CXXFLAGS = -std=c++2a -O2
 
 HEADER_DIR = include
 
@@ -62,8 +65,11 @@ $(EXEC): $(OBJ)
 shuffle1 : $(EXEC)
 	./$(EXEC) lists/to_shuffle1.txt
 
+shuffle2_break : $(EXEC)
+	./$(EXEC) lists/to_shuffle2.txt break
+
 shuffle2 : $(EXEC)
-	./$(EXEC) lists/to_shuffle2.txt
+	./$(EXEC) lists/to_shuffle2.txt nobreak
 
 shuffle3 : $(EXEC)
 	./$(EXEC) lists/to_shuffle3.txt
