@@ -45,6 +45,7 @@ std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::
     return pass_vec;
 }
 
+// TODO: seperate the common with parse_constraints part into another function
 std::vector<pass_info> parse_log(const std::string& info_file_name)
 {
     std::string buf;

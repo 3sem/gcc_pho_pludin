@@ -4,8 +4,10 @@
 
 int main(int argc, char* argv[])
 {
-    std::string to_shuffle_file = standart_pass_to_shuffle_file;
-    bool breakdown_second_list = true;
+    std::string to_shuffle_file = standart_pass_to_shuffle_file; // by default has a dummy name, to show to more explicitly show in cerr
+                                                                 // that file to shuffle was not given
+    bool breakdown_second_list = true; // second list's found very important pass is pre; so it was asked to add a possibility to shuffle 
+                                       // all passes before pre and after pre independantly
     if (argc >= 2)
     {
         to_shuffle_file = argv[1];

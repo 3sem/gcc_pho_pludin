@@ -16,7 +16,6 @@ struct properties
     unsigned long required = 0;
     unsigned long provided = 0;
     unsigned long destroyed = 0;
-
 };
 
 inline bool operator==(const properties& lhs, const properties& rhs)
@@ -28,8 +27,8 @@ inline bool operator==(const properties& lhs, const properties& rhs)
 
 struct pass_prop
 {
-    properties original;
-    properties custom;
+    properties original; // the once dumped with the help of plugin from gcc
+    properties custom;   // custom ones, needed to restrict reordering if some hidden dependencies are found
 };
 
 inline bool operator==(const pass_prop& lhs, const pass_prop& rhs)
@@ -48,7 +47,7 @@ inline bool operator==(const pass_info& lhs, const pass_info& rhs)
     return (lhs.name == rhs.name) && (lhs.prop == rhs.prop);
 }
 
-namespace std
+namespace std // necessary specializations of std::hash to use std::unordered_...<pass_info> and std::unordered_...<std::pair<ulong, ulong>>
 {
     template<>
     struct hash<pass_info>
@@ -78,10 +77,21 @@ namespace std
 }
 
 
+// function to read text from file into a std::string
+// throws if cannot open a file
 std::string get_file_text(const std::string& file_name);
+
+// parses log (named unique_passes.txt) with information about passes' property restrictions from the gcc itself
 std::vector<pass_info> parse_log(const std::string& info_file_name);
+
+// gets passes from file to vector of strings
 std::vector<std::string> parse_passes_file(const std::string& file_name);
+
+// finds number, and return a pair of found number and iterator after position of number end
 std::pair<unsigned long, std::string::const_iterator> find_number(std::string::const_iterator begin, const std::string& str);
+
+// Deprecated
+// Used to get passes in old format of custom property setting for passes
 std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::string::const_iterator end);
 
 
@@ -102,6 +112,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
     if (buf.empty())
         return 0;
 
+    // skip initial comments, empty lines and spaces
     auto it = buf.cbegin();
     auto second_it = it;
     while((it = std::find(it, buf.cend(), '#')) != buf.cend())
@@ -111,6 +122,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
     }
     it = ++second_it; // it after not finding another comment is at buf.cend, and second_it is at end of comment. So we se them both to next
 
+    // get initiall custom property
     auto&& it_and_start_state = find_number(buf.cbegin(), buf);
     second_it = it = it_and_start_state.second;
     unsigned long add_starting_state = it_and_start_state.first;
@@ -118,6 +130,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
     it++;
     for (; (it != buf.cend()) && (second_it != buf.cend()); it++)
     {
+        // skip comments, empty lines and spaces
         if (*it == ' ' || *it == '\n')
             continue;
         if (*it == '#')
@@ -128,19 +141,29 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
         }
 
         pass_info info;
+
+        // get pass name
         it = std::find_if(it, buf.cend(), [](const char c){ return isalpha(c);});
         second_it = std::find_if(it, buf.cend(), [](const char c){ return c == ' ';});
 
         info.name = std::string(it, second_it);
+
+        // crutch, no idea why all passes have '_' or '-' as delimetres except for this one
         if (info.name == "rtl")
             info.name.append(" pre");
 
+        // get properties
         auto&& req_iter_pair = find_number(second_it, buf);
         auto&& prov_iter_pair = find_number(req_iter_pair.second, buf);
         auto&& destr_iter_pair = find_number(prov_iter_pair.second, buf);
 
+        // fill custom properties into existing pass_info structure about given pass
         auto&& to_fill_constraint_it = std::find_if(begin, end, [&name = info.name](const pass_info& info){ return name == info.name;});
-        to_fill_constraint_it->prop.custom = {req_iter_pair.first, prov_iter_pair.first, destr_iter_pair.first};
+
+        to_fill_constraint_it->prop.custom.required  |= req_iter_pair.first;
+        to_fill_constraint_it->prop.custom.provided  |= prov_iter_pair.first;
+        to_fill_constraint_it->prop.custom.destroyed |= destr_iter_pair.first;
+
         // std::cout << "Got: " << info.name << ' ' << req_iter_pair.first << ' ' << prov_iter_pair.first << ' ' << destr_iter_pair.first << std::endl;
 
         it = second_it = destr_iter_pair.second;
@@ -149,6 +172,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
     return add_starting_state;
 }
 
+// necessary for more efficient finding of passes, which original and custom required property are satisfied with the current state
 template <typename iter>
 std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requirements(iter begin, iter end)
 {
@@ -161,6 +185,8 @@ std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requireme
     return unique_requirements;
 }
 
+// Deprecated
+// used for pass examination
 template <typename iter>
 std::unordered_set<std::string> get_providing_passes(iter begin, iter end)
 {
