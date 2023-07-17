@@ -79,7 +79,7 @@ struct PropertyStateMachine
 };
 
 
-// This class gets a range of passes' names and properties fields (required / provided / destroyed, original and custom) and range of passes names to be shuffled
+// This class gets a range of passes' names and properties fields (required / provided / destroyed; original and custom) and range of passes names to be shuffled
 // It then builds hash maps: unique property requirement -> all passes that require it
 // Then, using PropertyStateMachine, and built earlier hash map it fills a vector of passes that could be taken as next in generated sequence
 // and chooses one randomly from this vector
@@ -98,7 +98,8 @@ struct PassListGenerator
 
     std::vector<std::string> shuffled_passes; // resulting shuffled passes sequence
 
-    bool fail_if_not_all_passes_used = true;
+    bool fail_if_not_all_passes_used = true; // flag to determine whether to return COULD_NOT_GEN if could not use all passes in starting list 
+                                             // while reordering
 
     static constexpr int COULD_NOT_GEN = -1;
     static constexpr int USED_PASS = -2;
@@ -162,7 +163,6 @@ struct PassListGenerator
             pass_to_properties_[i] = it->prop;
         }
 
-        // std::vector<std::string> for_inline = {"*rebuild_cgraph_edges", "inline_param"};
         std::vector<std::string> for_sched4 = {"split4", "sched2"};
         std::vector<std::string> for_loopinit = {"fix_loops", "loop"};
         std::vector<std::string> for_noloop = {"fix_loops", "no_loop"};
@@ -223,13 +223,15 @@ struct PassListGenerator
 
         // Sometimes due to properties restrictions in given range of passes some pass1 cannot be after pass2; and if pass1 is taken before pass2
         // pass2 wont be in resulting sequence at all
-        // we try to avoid this, so TRY_AMOUNT tries are made, so that in resulting sequence there would be all passes
+        // we try to avoid not using all passes in resulting sequence, so TRY_AMOUNT tries are made, so that all passes would be used
         //
         // There is a flag fail_if_not_all_passes_used, which determines, whether the generation o sequence fails alltogether, if all sequence with all
         // passes could be generated, or just the last sequence is left as resulting
         for (int i = 0; (i < TRY_AMOUNT) && (state.passes_.size() != pass_vec_.size()); i++)
         {
             // clear the previously generated sequence if there was one
+            // and generate all necessary maps
+
             // std::cout << "TRY#" << i << std::endl;
             state.passes_.clear();
             unique_requirement_to_passes_.clear();
@@ -243,7 +245,7 @@ struct PassListGenerator
             std::mt19937 gen(rd());
 
             std::vector<int> passes_to_choose_from;
-            passes_to_choose_from.reserve(MAX_PASS_AMOUNT);
+            passes_to_choose_from.reserve(MAX_PASS_AMOUNT); // we reserve enough space, to avoid unnecessary reallocations
 
             for (int i = 0; i < pass_vec_.size(); i++)
             {
@@ -297,6 +299,7 @@ struct PassListGenerator
 
             // std::cout << state.original_property_state << ' ' << state.custom_property_state << std::endl;
 
+            // if could not meet required state by the end of sequence - regenerate
             if (((state.original_property_state & ending_property_state.first) != ending_property_state.first) ||
                 ((state.custom_property_state & ending_property_state.second) != ending_property_state.second))
             {
@@ -327,7 +330,6 @@ struct PassListGenerator
     }
 
     // Verify a sequence from file_name
-    void verify(std::pair<unsigned long, unsigned long> initial_property_state, const std::string& file_name)
     template <typename iter>
     void verify(iter begin, iter end, std::pair<unsigned long, unsigned long> initial_property_state)
     {
