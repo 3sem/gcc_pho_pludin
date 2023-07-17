@@ -1,16 +1,59 @@
 #ifndef DRIVER_HH
 #define DRIVE_HH
 
+#include <concepts>
+#include <vector>
+#include <iostream>
+#include <string>
+#include <unordered_map>
 #include "state_machine.hh"
-#include "file_parsing.hh"
+
+template<typename T>
+concept Range = requires(T a)
+{
+    a.begin();
+    a.end();
+    {a.begin() != a.end()} -> std::convertible_to<bool>;
+    { a.begin()++ } -> std::convertible_to<decltype(a.begin())>;
+    { ++a.begin() } -> std::convertible_to<decltype(a.begin())>;
+};
+
+template<typename T>
+concept InfoFileParser = requires(T a, const std::string& file_name)
+{
+    a.parse_log(file_name);
+    { a.parse_constraints(file_name) } -> std::convertible_to<std::pair<unsigned long, unsigned long>>;
+    requires Range<T>;
+    requires std::convertible_to<typename T::iterator::value_type, pass_info>;
+};
+
+template<typename T>
+concept PassFileParser = requires(T a, const std::string& file_name)
+{
+    a.parse_passes_file(file_name);
+    requires Range<T>;
+    requires std::convertible_to<typename T::iterator::value_type, std::string>;
+};
+
+template<typename T, typename info_iter, typename pass_iter>
+concept PassListGen = requires(T a, const std::pair<unsigned long, unsigned long> state, info_iter info_it, pass_iter pass_it)
+{
+    a.set_passes_vec(pass_it, pass_it);
+    a.set_info_vec(info_it, info_it);
+    a.shuffle_pass_order(state, state);
+    requires Range<T>;
+    requires std::convertible_to<typename T::iterator::value_type, std::string>;
+};
 
 
-template <typename LogParser, typename PassParser>
+template <typename LogParser, typename PassParser, typename ListGen>
+    requires InfoFileParser <LogParser> && PassFileParser<PassParser> &&
+             PassListGen<ListGen, decltype(std::declval<LogParser>().begin()), decltype(std::declval<ListGen>().begin())>
 class Driver
 {
     std::string descript_file_;
     std::vector<std::string> shuffled;
-    PassListGenerator gen;
+    ListGen gen;
     LogParser log_parser;
     PassParser pass_parser;
 
