@@ -300,20 +300,19 @@ struct PassListGenerator
         return 0;
     }
 
-    void verify(std::pair<unsigned long, unsigned long> initial_property_state, const std::string& file_name)
+    template <typename iter>
+    void verify(iter begin, iter end, std::pair<unsigned long, unsigned long> initial_property_state)
     {
-        std::vector<std::string> passes{parse_passes_file(file_name)};
-
         PropertyStateMachine state(pass_to_properties_);
         state.original_property_state = initial_property_state.first;
         state.custom_property_state = initial_property_state.second;
 
-        for (auto&& it : passes)
+        for (; begin != end; begin++)
         {
             // std::cout << "checking " << it << ' ' << "with property stuff:: " << pass_to_properties_[name_to_id_map_[it]].required << " ";
             // std::cout << pass_to_properties_[name_to_id_map_[it]].provided << " " << pass_to_properties_[name_to_id_map_[it]].destroyed;
             // std::cout << " and the state is " << state.property_state << std::endl;
-            state.apply_pass(name_to_id_map_[it]);
+            state.apply_pass(name_to_id_map_[*begin]);
         }
         std::cerr << state.original_property_state << state.custom_property_state << std::endl;
     }

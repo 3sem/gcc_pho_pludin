@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
         return -2;
     }
 
-    Driver driver(standart_pass_decription_file);
+    Driver<PassLogParser, PassToReorderParser> driver(standart_pass_decription_file);
 
     if (to_shuffle_file == "lists/to_shuffle2.txt")
         driver.set_if_breakdown_list2(breakdown_second_list);
