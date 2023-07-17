@@ -1,4 +1,10 @@
 opt_pass* pass_by_name(const char* name) {
+	if (!strcmp(name, "ehcleanup")) {
+		return make_pass_cleanup_eh(g);
+	}
+	if (!strcmp(name, "chkpopt")) {
+		return make_pass_chkp_opt(g);
+	}
 	if (!strcmp(name, "auto_inc_dec")) {
 		return make_pass_inc_dec(g);
 	}

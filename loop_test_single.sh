@@ -14,6 +14,11 @@ do
 	echo -e "\nIteration "$i"\n"
 
 	make shuffle$2
+	if [ $? -gt 0 ]
+	then 
+		echo -e "Shuffle failure"
+		exit 1
+	fi
 	make -C ./benches/$3 test_list$2
 	if [ $? -gt 0 ]
 	then

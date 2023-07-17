@@ -9,6 +9,11 @@ do
 	echo -e "\nIteration "$i"\n"
 
 	make all_lists
+	if [ $? -gt 0 ]
+	then 
+		echo -e "Shuffle failure"
+		exit 1
+	fi
 	make -C ./benches/$2 test_lists
 	if [ $? -gt 0 ]
 	then
