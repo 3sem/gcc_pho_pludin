@@ -63,19 +63,19 @@ $(EXEC): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(EXEC)
 
 shuffle1 : $(EXEC)
-	./$(EXEC) lists/to_shuffle1.txt
+	./$(EXEC) lists/to_shuffle1.txt list1.txt
 
 shuffle2_break : $(EXEC)
-	./$(EXEC) lists/to_shuffle2.txt break
+	./$(EXEC) lists/to_shuffle2.txt list2.txt break
 
 shuffle2 : $(EXEC)
-	./$(EXEC) lists/to_shuffle2.txt nobreak
+	./$(EXEC) lists/to_shuffle2.txt list2.txt nobreak
 
 shuffle3 : $(EXEC)
-	./$(EXEC) lists/to_shuffle3.txt
+	./$(EXEC) lists/to_shuffle3.txt list3.txt
 
 shuffle4 : $(EXEC)
-	./$(EXEC) lists/to_shuffle4.txt
+	./$(EXEC) lists/to_shuffle4.txt list4.txt
 
 $(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh
 

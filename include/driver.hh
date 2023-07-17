@@ -136,7 +136,7 @@ public:
         return failed;
     }
 
-    int generate_file_with_shuffle(const std::string& to_shuffle_file)
+    int generate_file_with_shuffle(const std::string& to_shuffle_file, const std::string& to_print_to)
     {
         std::unordered_map<std::string, int> list_to_starting_property = { {"lists/to_shuffle1.txt", 76079}, {"lists/to_shuffle2.txt", 76079},
                                                                            {"lists/to_shuffle3.txt", 130760}, {"lists/to_shuffle4.txt", 126255}        };
@@ -154,9 +154,7 @@ public:
                 return PassListGenerator::COULD_NOT_GEN;
         }
 
-        auto&& list_num = std::find_if(to_shuffle_file.begin(), to_shuffle_file.end(), [](const char c){ return isdigit(c); });
-
-        PassDumper to_dump(std::string{"list"} + std::string{list_num, to_shuffle_file.end()}, "", "");
+        PassDumper to_dump(to_print_to);
         to_dump.dump(shuffled.begin(), shuffled.end());
 
         return 0;

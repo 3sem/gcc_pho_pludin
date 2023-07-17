@@ -307,7 +307,7 @@ class PassDumper
 
     std::vector<std::string> sub_passes;
 public:
-    PassDumper(const std::string& file_name, const std::string& prefix, const std::string& suffix) :
+    PassDumper(const std::string& file_name, const std::string& prefix = "", const std::string& suffix = "") :
                 file_name_(file_name), prefix_(prefix), suffix_(suffix)
     {
         init_sub_passes();
