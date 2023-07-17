@@ -2,14 +2,17 @@
 #define DRIVE_HH
 
 #include "state_machine.hh"
+#include "file_parsing.hh"
 
 
-
+template <typename LogParser, typename PassParser>
 class Driver
 {
     std::string descript_file_;
     std::vector<std::string> shuffled;
     PassListGenerator gen;
+    LogParser log_parser;
+    PassParser pass_parser;
 
     bool shuffle_only_one = false;
 
@@ -22,31 +25,38 @@ public:
     void set_if_shuffle_multiple ( bool flag ) { shuffle_only_one = flag; }
     void set_if_breakdown_list2  ( bool flag ) { breakdown_list2 = flag; }
 
-    unsigned long fill_gen_info_vec(const std::string& constraints_file)
+    std::pair<unsigned long, unsigned long> fill_gen_info_vec(const std::string& constraints_file)
     {
-        std::vector<pass_info> info_vec{parse_log(descript_file_)};
-        unsigned long custom_start_state = parse_constraints(info_vec.begin(), info_vec.end(), constraints_file);
+        log_parser.parse_log(descript_file_);
+        auto&& [custom_start_state, custom_end_state] = log_parser.parse_constraints(constraints_file);
         // for (auto&& it : info_vec)
         //     std::cout << it.name << ' ' << it.prop.original.required << ' ' << it.prop.original.provided << ' ' << it.prop.original.destroyed <<
         //     ' ' << it.prop.custom.required << ' ' << it.prop.custom.provided << ' ' << it.prop.custom.destroyed << std::endl;
-        gen.set_info_vec(info_vec.begin(), info_vec.end());
+        // std::cout << "Starting & ending: " << custom_start_state << ' ' << custom_end_state << std::endl;
+        gen.set_info_vec(log_parser.begin(), log_parser.end());
 
-        return custom_start_state;
+        return {custom_start_state, custom_end_state};
     }
 
     void fill_gen_pass_vec(const std::string& to_shuffle_file)
     {
-        std::vector<std::string> passes{parse_passes_file(to_shuffle_file)};
-        if (to_shuffle_file == "lists/to_shuffle3.txt" && (std::find(passes.begin(), passes.end(), "loop2") == passes.end()))
+        pass_parser.parse_passes_file(to_shuffle_file);
+        if (to_shuffle_file == "lists/to_shuffle3.txt" && (std::find(pass_parser.begin(), pass_parser.end(), "loop2") == pass_parser.end()))
+        {
+            std::vector<std::string> passes = {pass_parser.begin(), pass_parser.end()};
             passes.push_back("loop2");
-        gen.set_passes_vec(passes.begin(), passes.end());
+            gen.set_passes_vec(passes.begin(), passes.end());
+        }
+
+        gen.set_passes_vec(pass_parser.begin(), pass_parser.end());
     }
 
     int get_shuffled_vec(const std::string& to_shuffle_file, unsigned long starting_prop)
     {
         auto&& list_num = std::find_if(to_shuffle_file.begin(), to_shuffle_file.end(), [](const char c){ return isdigit(c); });
         std::string constraints_file = std::string{"lists/constraints"} + std::string{list_num, to_shuffle_file.end()};
-        unsigned long custom_start_state = fill_gen_info_vec(constraints_file);
+
+        auto&& [custom_start_state, custom_end_state] = fill_gen_info_vec(constraints_file);
         fill_gen_pass_vec(to_shuffle_file);
 
         // for (auto&& it : gen.info_vec_)
@@ -58,7 +68,7 @@ public:
 
         gen.get_pass_name_to_id_maps();
 
-        int failed = gen.shuffle_pass_order({starting_prop, custom_start_state});
+        int failed = gen.shuffle_pass_order({starting_prop, custom_start_state}, {0, custom_end_state});
         if (failed)
                 return PassListGenerator::COULD_NOT_GEN;
 
@@ -110,8 +120,8 @@ public:
         {
             if (shuffle_only_one)
             {
-                std::vector<std::string> loop_passes{parse_passes_file("lists/to_shuffle4.txt")};
-                assembled_list2.insert(++it, loop_passes.begin(), loop_passes.end());
+                pass_parser.parse_passes_file("lists/to_shuffle4.txt");
+                assembled_list2.insert(++it, pass_parser.begin(), pass_parser.end());
             }
             else
             {
@@ -136,7 +146,7 @@ public:
         return failed;
     }
 
-    int generate_file_with_shuffle(const std::string& to_shuffle_file)
+    int generate_file_with_shuffle(const std::string& to_shuffle_file, const std::string& to_print_to)
     {
         std::unordered_map<std::string, int> list_to_starting_property = { {"lists/to_shuffle1.txt", 76079}, {"lists/to_shuffle2.txt", 76079},
                                                                            {"lists/to_shuffle3.txt", 130760}, {"lists/to_shuffle4.txt", 126255}        };
@@ -154,9 +164,7 @@ public:
                 return PassListGenerator::COULD_NOT_GEN;
         }
 
-        auto&& list_num = std::find_if(to_shuffle_file.begin(), to_shuffle_file.end(), [](const char c){ return isdigit(c); });
-
-        PassDumper to_dump(std::string{"list"} + std::string{list_num, to_shuffle_file.end()}, "", "");
+        PassDumper to_dump(to_print_to);
         to_dump.dump(shuffled.begin(), shuffled.end());
 
         return 0;

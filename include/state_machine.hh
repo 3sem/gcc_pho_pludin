@@ -103,7 +103,7 @@ struct PassListGenerator
     static constexpr int COULD_NOT_GEN = -1;
     static constexpr int USED_PASS = -2;
     static constexpr int MAX_PASS_AMOUNT = 250;
-    static constexpr int TRY_AMOUNT = 1e4;
+    static constexpr int TRY_AMOUNT = 1e2;
 
     PassListGenerator() = default;
 
@@ -162,13 +162,13 @@ struct PassListGenerator
             pass_to_properties_[i] = it->prop;
         }
 
-        std::vector<std::string> for_inline = {"*rebuild_cgraph_edges", "inline_param"};
+        // std::vector<std::string> for_inline = {"*rebuild_cgraph_edges", "inline_param"};
         std::vector<std::string> for_sched4 = {"split4", "sched2"};
         std::vector<std::string> for_loopinit = {"fix_loops", "loop"};
         std::vector<std::string> for_noloop = {"fix_loops", "no_loop"};
         std::vector<std::string> for_loops = {"loop2", "loop2_init", "loop2_invariant", "loop2_unroll", "loop2_doloop", "loop2_done"};
 
-        std::vector pass_batches_names_vec = {for_inline, for_sched4, for_loopinit, for_noloop, for_loops};
+        std::vector pass_batches_names_vec = {for_sched4, for_loopinit, for_noloop, for_loops};
         std::vector<pass_prop> pass_batches_prop_vec;
         for (int k = 0; k < pass_batches_names_vec.size(); k++)
         {
@@ -184,6 +184,7 @@ struct PassListGenerator
             // we place a combined pass property struct of whole batch into info_vec so that the function that generates unique requirements set would also
             // include the generated batches requirements
             info_vec_.push_back({std::string{"batch_"} + pass_batches_names_vec[k].back(), prop_for_batch});
+
 
             pass_batches_prop_vec.push_back(prop_for_batch);
         }
@@ -215,7 +216,8 @@ struct PassListGenerator
     }
 
     // the shuffling itself
-    int shuffle_pass_order(const std::pair<unsigned long, unsigned long>& initial_property_state)
+    int shuffle_pass_order(const std::pair<unsigned long, unsigned long>& initial_property_state,
+                           const std::pair<unsigned long, unsigned long>& ending_property_state)
     {
         PropertyStateMachine state(pass_to_properties_);
 
@@ -228,6 +230,7 @@ struct PassListGenerator
         for (int i = 0; (i < TRY_AMOUNT) && (state.passes_.size() != pass_vec_.size()); i++)
         {
             // clear the previously generated sequence if there was one
+            // std::cout << "TRY#" << i << std::endl;
             state.passes_.clear();
             unique_requirement_to_passes_.clear();
             shuffled_passes.clear();
@@ -265,11 +268,24 @@ struct PassListGenerator
                     break;
 
                 // choose a pass randomly
+
+                // std::cout << "Available: " << std::endl;
+                // for (auto&& it : passes_to_choose_from)
+                // {
+                //     std::cout << id_to_name[it] << ' ';
+                // }
+                // std::cout << std::endl;
+
                 std::uniform_int_distribution<> to_get_index(0, passes_to_choose_from.size() - 1);
 
                 int position_of_chosen_pass = to_get_index(gen);
                 int chosen_pass = passes_to_choose_from[position_of_chosen_pass];
+                // std::cout << "Chosen: " << id_to_name[chosen_pass] << std::endl;
+
+                // std::cout << "Before " << state.custom_property_state << std::endl;
                 state.apply_pass(chosen_pass);
+                // std::cout << "After " << state.custom_property_state << std::endl;
+
 
                 // reset available passes and erase used pass from pool of all passes to reorder
                 passes_to_choose_from.clear();
@@ -277,6 +293,15 @@ struct PassListGenerator
 
                 auto&& to_erase_used_pass_from = unique_requirement_to_passes_[{properties_of_chosen.original.required, properties_of_chosen.custom.required}];
                 to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
+            }
+
+            // std::cout << state.original_property_state << ' ' << state.custom_property_state << std::endl;
+
+            if (((state.original_property_state & ending_property_state.first) != ending_property_state.first) ||
+                ((state.custom_property_state & ending_property_state.second) != ending_property_state.second))
+            {
+                state.passes_.clear();
+                continue;
             }
 
             // map from resulting sequence of passes ids back to names
@@ -303,19 +328,19 @@ struct PassListGenerator
 
     // Verify a sequence from file_name
     void verify(std::pair<unsigned long, unsigned long> initial_property_state, const std::string& file_name)
+    template <typename iter>
+    void verify(iter begin, iter end, std::pair<unsigned long, unsigned long> initial_property_state)
     {
-        std::vector<std::string> passes{parse_passes_file(file_name)};
-
         PropertyStateMachine state(pass_to_properties_);
         state.original_property_state = initial_property_state.first;
         state.custom_property_state = initial_property_state.second;
 
-        for (auto&& it : passes)
+        for (; begin != end; begin++)
         {
             // std::cout << "checking " << it << ' ' << "with property stuff:: " << pass_to_properties_[name_to_id_map_[it]].required << " ";
             // std::cout << pass_to_properties_[name_to_id_map_[it]].provided << " " << pass_to_properties_[name_to_id_map_[it]].destroyed;
             // std::cout << " and the state is " << state.property_state << std::endl;
-            state.apply_pass(name_to_id_map_[it]);
+            state.apply_pass(name_to_id_map_[*begin]);
         }
         std::cerr << state.original_property_state << state.custom_property_state << std::endl;
     }
@@ -333,7 +358,7 @@ class PassDumper
 
     std::vector<std::string> sub_passes;
 public:
-    PassDumper(const std::string& file_name, const std::string& prefix, const std::string& suffix) :
+    PassDumper(const std::string& file_name, const std::string& prefix = "", const std::string& suffix = "") :
                 file_name_(file_name), prefix_(prefix), suffix_(suffix)
     {
         init_sub_passes();

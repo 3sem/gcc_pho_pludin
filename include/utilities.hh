@@ -76,103 +76,6 @@ namespace std // necessary specializations of std::hash to use std::unordered_..
     };
 }
 
-
-// function to read text from file into a std::string
-// throws if cannot open a file
-std::string get_file_text(const std::string& file_name);
-
-// parses log (named unique_passes.txt) with information about passes' property restrictions from the gcc itself
-std::vector<pass_info> parse_log(const std::string& info_file_name);
-
-// gets passes from file to vector of strings
-std::vector<std::string> parse_passes_file(const std::string& file_name);
-
-// finds number, and return a pair of found number and iterator after position of number end
-std::pair<unsigned long, std::string::const_iterator> find_number(std::string::const_iterator begin, const std::string& str);
-
-// Deprecated
-// Used to get passes in old format of custom property setting for passes
-std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::string::const_iterator end);
-
-
-template <typename iter>
-unsigned long parse_constraints(iter begin, iter end, const std::string& constraint_file_name)
-{
-    std::string buf;
-    try
-    {
-        buf = get_file_text(constraint_file_name);
-    }
-    catch(const std::ios_base::failure& exc)
-    {
-        std::cerr << "Could not open file " << constraint_file_name << " to get constraints info" << std::endl;
-        return 0;
-    }
-
-    if (buf.empty())
-        return 0;
-
-    // skip initial comments, empty lines and spaces
-    auto it = buf.cbegin();
-    auto second_it = it;
-    while((it = std::find(it, buf.cend(), '#')) != buf.cend())
-    {
-        second_it = std::find(it, buf.cend(), '\n');
-        it = second_it;
-    }
-    it = ++second_it; // it after not finding another comment is at buf.cend, and second_it is at end of comment. So we se them both to next
-
-    // get initiall custom property
-    auto&& it_and_start_state = find_number(buf.cbegin(), buf);
-    second_it = it = it_and_start_state.second;
-    unsigned long add_starting_state = it_and_start_state.first;
-
-    it++;
-    for (; (it != buf.cend()) && (second_it != buf.cend()); it++)
-    {
-        // skip comments, empty lines and spaces
-        if (*it == ' ' || *it == '\n')
-            continue;
-        if (*it == '#')
-        {
-            it = std::find(it, buf.cend(), '\n');
-            second_it = it;
-            continue;
-        }
-
-        pass_info info;
-
-        // get pass name
-        it = std::find_if(it, buf.cend(), [](const char c){ return isalpha(c);});
-        second_it = std::find_if(it, buf.cend(), [](const char c){ return c == ' ';});
-
-        info.name = std::string(it, second_it);
-
-        // crutch, no idea why all passes have '_' or '-' as delimetres except for this one
-        if (info.name == "rtl")
-            info.name.append(" pre");
-
-        // get properties
-        auto&& req_iter_pair = find_number(second_it, buf);
-        auto&& prov_iter_pair = find_number(req_iter_pair.second, buf);
-        auto&& destr_iter_pair = find_number(prov_iter_pair.second, buf);
-
-        // fill custom properties into existing pass_info structure about given pass
-        auto&& to_fill_constraint_it = std::find_if(begin, end, [&name = info.name](const pass_info& info){ return name == info.name;});
-
-        to_fill_constraint_it->prop.custom.required  |= req_iter_pair.first;
-        to_fill_constraint_it->prop.custom.provided  |= prov_iter_pair.first;
-        to_fill_constraint_it->prop.custom.provided  &= ~destr_iter_pair.first;
-        to_fill_constraint_it->prop.custom.destroyed |= destr_iter_pair.first;
-
-        // std::cout << "Got: " << info.name << ' ' << req_iter_pair.first << ' ' << prov_iter_pair.first << ' ' << destr_iter_pair.first << std::endl;
-
-        it = second_it = destr_iter_pair.second;
-    }
-
-    return add_starting_state;
-}
-
 // necessary for more efficient finding of passes, which original and custom required property are satisfied with the current state
 template <typename iter>
 std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requirements(iter begin, iter end)
@@ -185,25 +88,5 @@ std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requireme
 
     return unique_requirements;
 }
-
-// Deprecated
-// used for pass examination
-template <typename iter>
-std::unordered_set<std::string> get_providing_passes(iter begin, iter end)
-{
-    std::unordered_set<std::string> providing_passes;
-
-    for (; begin != end; begin++)
-    {
-        if (begin->prop.provided != 0)
-            providing_passes.insert(begin->name);
-    }
-
-    for (auto&& it : providing_passes)
-        std::cout << it << " ";
-
-    return providing_passes;
-}
-
 
 #endif

@@ -47,7 +47,7 @@ HEADER_DIR = include
 
 CXXFLAGS += -I$(HEADER_DIR)
 
-SOURCES = main.cc utilities.cc
+SOURCES = main.cc file_parsing.cc
 SRC := $(addprefix $(SRC_DIR)/, $(SOURCES))
 
 OBJECTS = $(SOURCES:.cc=.o)
@@ -63,23 +63,23 @@ $(EXEC): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(EXEC)
 
 shuffle1 : $(EXEC)
-	./$(EXEC) lists/to_shuffle1.txt
+	./$(EXEC) lists/to_shuffle1.txt list1.txt
 
 shuffle2_break : $(EXEC)
-	./$(EXEC) lists/to_shuffle2.txt break
+	./$(EXEC) lists/to_shuffle2.txt list2.txt break
 
 shuffle2 : $(EXEC)
-	./$(EXEC) lists/to_shuffle2.txt nobreak
+	./$(EXEC) lists/to_shuffle2.txt list2.txt nobreak
 
 shuffle3 : $(EXEC)
-	./$(EXEC) lists/to_shuffle3.txt
+	./$(EXEC) lists/to_shuffle3.txt list3.txt
 
 shuffle4 : $(EXEC)
-	./$(EXEC) lists/to_shuffle4.txt
+	./$(EXEC) lists/to_shuffle4.txt list4.txt
 
-$(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh
+$(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh include/file_parsing.hh
 
-$(OBJ_DIR)/utilities.o: src/utilities.cc include/utilities.hh
+$(OBJ_DIR)/file_parsing.o: src/file_parsing.cc include/file_parsing.hh include/utilities.hh
 
 clean_obj:
 	rm $(OBJ_DIR)/*.o
