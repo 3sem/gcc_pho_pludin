@@ -71,6 +71,7 @@ do
 		TTIME=$(date +%d_%H_%M)
 		echo -e "Found better order, saving to lists/${TTIME}_${i}"
 		echo -e "${shuffled_size}B, ${shuffled_time}s"
+		mkdir lists/${TTIME}_${i}
 		echo -e "${shuffled_size}B, ${shuffled_time}s" > lists/${TTIME}_${i}/stats.txt
 		cp loc_lists/* lists/${TTIME}_${i}/
 	else
