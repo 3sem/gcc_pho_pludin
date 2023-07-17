@@ -144,7 +144,7 @@ std::pair<unsigned long, unsigned long> parse_constraints(iter begin, iter end, 
         pass_info info;
 
         // get pass name
-        it = std::find_if(it, buf.cend(), [](const char c){ return isalpha(c);});
+        it = std::find_if(it, buf.cend(), [](const char c){ return isalpha(c) || (c == '*');});
         second_it = std::find_if(it, buf.cend(), [](const char c){ return c == ' ';});
 
         info.name = std::string(it, second_it);

@@ -21,3 +21,4 @@ fnsplit
 release_ssa
 *rebuild_cgraph_edges
 inline_param
+*rebuild_cgraph_edges

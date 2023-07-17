@@ -95,7 +95,7 @@ struct PassListGenerator
     static constexpr int COULD_NOT_GEN = -1;
     static constexpr int USED_PASS = -2;
     static constexpr int MAX_PASS_AMOUNT = 250;
-    static constexpr int TRY_AMOUNT = 1e4;
+    static constexpr int TRY_AMOUNT = 1e2;
 
     PassListGenerator() = default;
 
@@ -152,13 +152,13 @@ struct PassListGenerator
             pass_to_properties_[i] = it->prop;
         }
 
-        std::vector<std::string> for_inline = {"*rebuild_cgraph_edges", "inline_param"};
+        // std::vector<std::string> for_inline = {"*rebuild_cgraph_edges", "inline_param"};
         std::vector<std::string> for_sched4 = {"split4", "sched2"};
         std::vector<std::string> for_loopinit = {"fix_loops", "loop"};
         std::vector<std::string> for_noloop = {"fix_loops", "no_loop"};
         std::vector<std::string> for_loops = {"loop2", "loop2_init", "loop2_invariant", "loop2_unroll", "loop2_doloop", "loop2_done"};
 
-        std::vector pass_batches_names_vec = {for_inline, for_sched4, for_loopinit, for_noloop, for_loops};
+        std::vector pass_batches_names_vec = {for_sched4, for_loopinit, for_noloop, for_loops};
         std::vector<pass_prop> pass_batches_prop_vec;
         for (int k = 0; k < pass_batches_names_vec.size(); k++)
         {
@@ -172,6 +172,7 @@ struct PassListGenerator
             }
 
             info_vec_.push_back({std::string{"batch_"} + pass_batches_names_vec[k].back(), prop_for_batch});
+
 
             pass_batches_prop_vec.push_back(prop_for_batch);
         }
@@ -210,6 +211,7 @@ struct PassListGenerator
 
         for (int i = 0; (i < TRY_AMOUNT) && (state.passes_.size() != pass_vec_.size()); i++)
         {
+            // std::cout << "TRY#" << i << std::endl;
             state.passes_.clear();
             unique_requirement_to_passes_.clear();
             shuffled_passes.clear();
@@ -242,12 +244,24 @@ struct PassListGenerator
                 if (passes_to_choose_from.empty())
                     break;
 
+                // std::cout << "Available: " << std::endl;
+                // for (auto&& it : passes_to_choose_from)
+                // {
+                //     std::cout << id_to_name[it] << ' ';
+                // }
+                // std::cout << std::endl;
+
                 std::uniform_int_distribution<> to_get_index(0, passes_to_choose_from.size() - 1);
 
 
                 int position_of_chosen_pass = to_get_index(gen);
                 int chosen_pass = passes_to_choose_from[position_of_chosen_pass];
+                // std::cout << "Chosen: " << id_to_name[chosen_pass] << std::endl;
+
+                // std::cout << "Before " << state.custom_property_state << std::endl;
                 state.apply_pass(chosen_pass);
+                // std::cout << "After " << state.custom_property_state << std::endl;
+
 
                 passes_to_choose_from.clear();
                 auto&& properties_of_chosen = pass_to_properties_.at(chosen_pass);
@@ -255,6 +269,8 @@ struct PassListGenerator
                 auto&& to_erase_used_pass_from = unique_requirement_to_passes_[{properties_of_chosen.original.required, properties_of_chosen.custom.required}];
                 to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
             }
+
+            // std::cout << state.original_property_state << ' ' << state.custom_property_state << std::endl;
 
             if (((state.original_property_state & ending_property_state.first) != ending_property_state.first) ||
                 ((state.custom_property_state & ending_property_state.second) != ending_property_state.second))
