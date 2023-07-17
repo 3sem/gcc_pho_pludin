@@ -22,16 +22,17 @@ public:
     void set_if_shuffle_multiple ( bool flag ) { shuffle_only_one = flag; }
     void set_if_breakdown_list2  ( bool flag ) { breakdown_list2 = flag; }
 
-    unsigned long fill_gen_info_vec(const std::string& constraints_file)
+    std::pair<unsigned long, unsigned long> fill_gen_info_vec(const std::string& constraints_file)
     {
         std::vector<pass_info> info_vec{parse_log(descript_file_)};
-        unsigned long custom_start_state = parse_constraints(info_vec.begin(), info_vec.end(), constraints_file);
+        auto&& [custom_start_state, custom_end_state] = parse_constraints(info_vec.begin(), info_vec.end(), constraints_file);
         // for (auto&& it : info_vec)
         //     std::cout << it.name << ' ' << it.prop.original.required << ' ' << it.prop.original.provided << ' ' << it.prop.original.destroyed <<
         //     ' ' << it.prop.custom.required << ' ' << it.prop.custom.provided << ' ' << it.prop.custom.destroyed << std::endl;
+        // std::cout << "Starting & ending: " << custom_start_state << ' ' << custom_end_state << std::endl;
         gen.set_info_vec(info_vec.begin(), info_vec.end());
 
-        return custom_start_state;
+        return {custom_start_state, custom_end_state};
     }
 
     void fill_gen_pass_vec(const std::string& to_shuffle_file)
@@ -46,7 +47,7 @@ public:
     {
         auto&& list_num = std::find_if(to_shuffle_file.begin(), to_shuffle_file.end(), [](const char c){ return isdigit(c); });
         std::string constraints_file = std::string{"lists/constraints"} + std::string{list_num, to_shuffle_file.end()};
-        unsigned long custom_start_state = fill_gen_info_vec(constraints_file);
+        auto&& [custom_start_state, custom_end_state] = fill_gen_info_vec(constraints_file);
         fill_gen_pass_vec(to_shuffle_file);
 
         // for (auto&& it : gen.info_vec_)
@@ -58,7 +59,7 @@ public:
 
         gen.get_pass_name_to_id_maps();
 
-        int failed = gen.shuffle_pass_order({starting_prop, custom_start_state});
+        int failed = gen.shuffle_pass_order({starting_prop, custom_start_state}, {0, custom_end_state});
         if (failed)
                 return PassListGenerator::COULD_NOT_GEN;
 

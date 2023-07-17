@@ -96,7 +96,7 @@ std::vector<std::string> get_passes_seq(std::string::const_iterator begin, std::
 
 
 template <typename iter>
-unsigned long parse_constraints(iter begin, iter end, const std::string& constraint_file_name)
+std::pair<unsigned long, unsigned long> parse_constraints(iter begin, iter end, const std::string& constraint_file_name)
 {
     std::string buf;
     try
@@ -106,11 +106,11 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
     catch(const std::ios_base::failure& exc)
     {
         std::cerr << "Could not open file " << constraint_file_name << " to get constraints info" << std::endl;
-        return 0;
+        return {0, 0};
     }
 
     if (buf.empty())
-        return 0;
+        return {0, 0};
 
     // skip initial comments, empty lines and spaces
     auto it = buf.cbegin();
@@ -125,8 +125,9 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
     // get initiall custom property
     auto&& it_and_start_state = find_number(buf.cbegin(), buf);
     second_it = it = it_and_start_state.second;
-    unsigned long add_starting_state = it_and_start_state.first;
+    unsigned long starting_state = it_and_start_state.first;
 
+    unsigned long ending_state = 0;
     it++;
     for (; (it != buf.cend()) && (second_it != buf.cend()); it++)
     {
@@ -152,6 +153,15 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
         if (info.name == "rtl")
             info.name.append(" pre");
 
+        if (info.name == "end_state")
+        {
+            auto&& end_iter_pair = find_number(second_it, buf);
+
+            ending_state |= end_iter_pair.first;
+            it = second_it = end_iter_pair.second;
+            continue;
+        }
+
         // get properties
         auto&& req_iter_pair = find_number(second_it, buf);
         auto&& prov_iter_pair = find_number(req_iter_pair.second, buf);
@@ -170,7 +180,7 @@ unsigned long parse_constraints(iter begin, iter end, const std::string& constra
         it = second_it = destr_iter_pair.second;
     }
 
-    return add_starting_state;
+    return {starting_state, ending_state};
 }
 
 // necessary for more efficient finding of passes, which original and custom required property are satisfied with the current state

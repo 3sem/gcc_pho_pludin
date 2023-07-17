@@ -203,7 +203,8 @@ struct PassListGenerator
     }
 
     // the shuffling itself
-    int shuffle_pass_order(const std::pair<unsigned long, unsigned long>& initial_property_state)
+    int shuffle_pass_order(const std::pair<unsigned long, unsigned long>& initial_property_state,
+                           const std::pair<unsigned long, unsigned long>& ending_property_state)
     {
         PropertyStateMachine state(pass_to_properties_);
 
@@ -253,6 +254,13 @@ struct PassListGenerator
 
                 auto&& to_erase_used_pass_from = unique_requirement_to_passes_[{properties_of_chosen.original.required, properties_of_chosen.custom.required}];
                 to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
+            }
+
+            if (((state.original_property_state & ending_property_state.first) != ending_property_state.first) ||
+                ((state.custom_property_state & ending_property_state.second) != ending_property_state.second))
+            {
+                state.passes_.clear();
+                continue;
             }
 
             for (auto&& iter : state.passes_)
