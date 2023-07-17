@@ -104,7 +104,7 @@ struct PassListGenerator
     static constexpr int COULD_NOT_GEN = -1;
     static constexpr int USED_PASS = -2;
     static constexpr int MAX_PASS_AMOUNT = 250;
-    static constexpr int TRY_AMOUNT = 1e2;
+    static constexpr int TRY_AMOUNT = 1e4;
 
     PassListGenerator() = default;
 
@@ -196,6 +196,19 @@ struct PassListGenerator
             erase_repeating(it.begin(), it.begin() + it.size() - 1);
             i++, j++;
         }
+    }
+
+    // necessary for more efficient finding of passes, which original and custom required property are satisfied with the current state
+    template <typename iter>
+    std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requirements(iter begin, iter end)
+    {
+        std::unordered_set<std::pair<unsigned long, unsigned long>> unique_requirements;
+        for (; begin != end; begin++)
+        {
+            unique_requirements.insert({begin->prop.original.required, begin->prop.custom.required});
+        }
+
+        return unique_requirements;
     }
 
     // create a hash map : unique requirement -> all passes (from given range to reorder) that require it
@@ -347,8 +360,15 @@ struct PassListGenerator
         std::cerr << state.original_property_state << state.custom_property_state << std::endl;
     }
 
-    std::vector<std::string>::iterator begin() { return shuffled_passes.begin(); }
-    std::vector<std::string>::iterator end() { return shuffled_passes.end(); }
+    using iterator = std::vector<std::string>::iterator;
+    using const_iterator = std::vector<std::string>::const_iterator;
+
+    iterator begin() { return shuffled_passes.begin(); }
+    iterator end() { return shuffled_passes.end(); }
+    const_iterator begin() const { return shuffled_passes.begin(); }
+    const_iterator end() const { return shuffled_passes.end(); }
+    const_iterator cbegin() { return shuffled_passes.cbegin(); }
+    const_iterator cend() { return shuffled_passes.cend(); }
 
 };
 

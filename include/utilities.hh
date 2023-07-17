@@ -76,17 +76,4 @@ namespace std // necessary specializations of std::hash to use std::unordered_..
     };
 }
 
-// necessary for more efficient finding of passes, which original and custom required property are satisfied with the current state
-template <typename iter>
-std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requirements(iter begin, iter end)
-{
-    std::unordered_set<std::pair<unsigned long, unsigned long>> unique_requirements;
-    for (; begin != end; begin++)
-    {
-        unique_requirements.insert({begin->prop.original.required, begin->prop.custom.required});
-    }
-
-    return unique_requirements;
-}
-
 #endif
