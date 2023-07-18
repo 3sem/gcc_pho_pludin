@@ -7,6 +7,9 @@
 #include <random>
 #include "utilities.hh"
 
+namespace gcc_reorder
+{
+
 const char standart_pass_decription_file[] = "unique_passes.txt";
 const char standart_pass_to_shuffle_file[] = "dummy_file_name_if_not_given.txt";
 const char standart_dump_file[] = "shuffled.txt";
@@ -203,5 +206,7 @@ struct PassListGenerator
     const_iterator cend() { return shuffled_passes.cend(); }
 
 };
+
+} // namespace gcc_reorder
 
 #endif

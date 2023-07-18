@@ -78,7 +78,7 @@ shuffle3 : $(EXEC)
 shuffle4 : $(EXEC)
 	./$(EXEC) --input_file=lists/to_shuffle4.txt --output_file=list4.txt --log_file=unique_passes.txt
 
-$(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh include/file_parsing.hh include/pass_printer.hh
+$(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh include/file_parsing.hh include/pass_printer.hh include/options_parsing.hh
 
 $(OBJ_DIR)/file_parsing.o: src/file_parsing.cc include/file_parsing.hh include/utilities.hh
 

@@ -11,6 +11,9 @@
 #include <vector>
 #include <algorithm>
 
+namespace gcc_reorder
+{
+
 struct properties
 {
     unsigned long required = 0;
@@ -47,13 +50,15 @@ inline bool operator==(const pass_info& lhs, const pass_info& rhs)
     return (lhs.name == rhs.name) && (lhs.prop == rhs.prop);
 }
 
+} // namespace gcc_reorder
+
 namespace std // necessary specializations of std::hash to use std::unordered_...<pass_info> and std::unordered_...<std::pair<ulong, ulong>>
 {
     template<>
-    struct hash<pass_info>
+    struct hash<gcc_reorder::pass_info>
     {
-        typedef pass_info argument_type;
-        std::size_t operator()(const pass_info& info) const
+        typedef gcc_reorder::pass_info argument_type;
+        std::size_t operator()(const argument_type& info) const
         {
             std::size_t h1 = std::hash<std::string>{}(info.name);
             std::size_t h2 = std::hash<unsigned long>{}(info.prop.custom.required + info.prop.original.required) << 1;

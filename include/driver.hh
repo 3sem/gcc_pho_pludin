@@ -1,5 +1,5 @@
 #ifndef DRIVER_HH
-#define DRIVE_HH
+#define DRIVER_HH
 
 #include <concepts>
 #include <vector>
@@ -9,6 +9,9 @@
 #include <filesystem>
 #include "utilities.hh"
 #include "pass_printer.hh"
+
+namespace gcc_reorder
+{
 
 template<typename T>
 concept Range = requires(T a)
@@ -223,5 +226,7 @@ private:
         return failed;
     }
 };
+
+} // namespace gcc_reorder
 
 #endif

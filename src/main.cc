@@ -11,8 +11,8 @@ int main(int argc, char* argv[])
         return -2;
     }
 
-    ShufflerOptionParser opt_parser(argc, argv);
-    Driver<PassLogParser, PassToReorderParser, PassListGenerator> driver(opt_parser.log_file);
+    gcc_reorder::ShufflerOptionParser opt_parser(argc, argv);
+    gcc_reorder::Driver<gcc_reorder::PassLogParser, gcc_reorder::PassToReorderParser, gcc_reorder::PassListGenerator> driver(opt_parser.log_file);
 
     driver.set_if_breakdown_list2(opt_parser.breakdown_list2);
 

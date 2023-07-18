@@ -1,6 +1,12 @@
+#ifndef OPTION_PARSING_HH
+#define OPTION_PARSING_HH
+
 #include <iostream>
 #include <vector>
 #include <getopt.h>
+
+namespace gcc_reorder
+{
 
 class ShufflerOptionParser
 {
@@ -32,3 +38,7 @@ public:
     int parse_command_line_options(int argcount, char* arg_vec[]);
 
 };
+
+} // namespace gcc_reorder
+
+#endif

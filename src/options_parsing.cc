@@ -1,5 +1,7 @@
 #include "options_parsing.hh"
 
+namespace gcc_reorder
+{
 
 int ShufflerOptionParser::parse_command_line_options(int argcount, char* arg_vec[])
     {
@@ -32,3 +34,5 @@ int ShufflerOptionParser::parse_command_line_options(int argcount, char* arg_vec
 
         return 0;
     }
+
+} // namespace gcc_reorder

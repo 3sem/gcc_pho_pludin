@@ -1,5 +1,8 @@
 #include "file_parsing.hh"
 
+namespace gcc_reorder
+{
+
 void FileReader::get_file_text(const std::string& file_name)
 {
     std::ifstream input;
@@ -129,3 +132,5 @@ void PassToReorderParser::parse_passes_file(const std::string& file_name)
         iter = second_iter;
     }
 }
+
+} // namespace gcc_reorder

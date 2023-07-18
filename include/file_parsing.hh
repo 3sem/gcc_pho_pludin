@@ -13,6 +13,9 @@
 
 #include "utilities.hh"
 
+namespace gcc_reorder
+{
+
 class FileReader
 {
 protected:
@@ -107,5 +110,6 @@ public:
 
 
 
+} // namespace gcc_reorder
 
 #endif

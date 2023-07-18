@@ -5,6 +5,9 @@
 #include <string>
 #include <sstream>
 
+namespace gcc_reorder
+{
+
 template <typename iter>
 void modify_subpasses(iter str_vec_begin, iter str_vec_end)
 {
@@ -39,5 +42,6 @@ public:
     }
 };
 
+} // namespace gcc_reorder
 
 #endif

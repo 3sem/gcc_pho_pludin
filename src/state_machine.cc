@@ -1,5 +1,7 @@
 #include "state_machine.hh"
 
+namespace gcc_reorder
+{
 
 // map passes' names onto ids and batches of passes onto ids
 void PassListGenerator::get_pass_name_to_id_maps()
@@ -178,3 +180,5 @@ int PassListGenerator::shuffle_pass_order(const std::pair<unsigned long, unsigne
 
     return 0;
 }
+
+} // namespace gcc_reorder
