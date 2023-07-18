@@ -48,7 +48,7 @@ HEADER_DIR = include
 CXXFLAGS += -I$(HEADER_DIR)
 GCC_MIN_VERSION=-10
 
-SOURCES = main.cc file_parsing.cc state_machine.cc
+SOURCES = main.cc file_parsing.cc state_machine.cc options_parsing.cc
 SRC := $(addprefix $(SRC_DIR)/, $(SOURCES))
 
 OBJECTS = $(SOURCES:.cc=.o)
@@ -64,25 +64,27 @@ $(EXEC): $(OBJ)
 	$(CXX)$(GCC_MIN_VERSION) $(CXXFLAGS) $(OBJ) -o $(EXEC)
 
 shuffle1 : $(EXEC)
-	./$(EXEC) lists/to_shuffle1.txt list1.txt
+	./$(EXEC) --input_file=lists/to_shuffle1.txt --output_file=list1.txt --log_file=unique_passes.txt
 
 shuffle2_break : $(EXEC)
-	./$(EXEC) lists/to_shuffle2.txt list2.txt break
+	./$(EXEC) --input_file=lists/to_shuffle2.txt --output_file=list2.txt --log_file=unique_passes.txt --break
 
 shuffle2 : $(EXEC)
-	./$(EXEC) lists/to_shuffle2.txt list2.txt nobreak
+	./$(EXEC) --input_file=lists/to_shuffle2.txt --output_file=list2.txt --log_file=unique_passes.txt
 
 shuffle3 : $(EXEC)
-	./$(EXEC) lists/to_shuffle3.txt list3.txt
+	./$(EXEC) --input_file=lists/to_shuffle3.txt --output_file=list3.txt --log_file=unique_passes.txt
 
 shuffle4 : $(EXEC)
-	./$(EXEC) lists/to_shuffle4.txt list4.txt
+	./$(EXEC) --input_file=lists/to_shuffle4.txt --output_file=list4.txt --log_file=unique_passes.txt
 
 $(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh include/file_parsing.hh include/pass_printer.hh
 
 $(OBJ_DIR)/file_parsing.o: src/file_parsing.cc include/file_parsing.hh include/utilities.hh
 
 $(OBJ_DIR)/state_machine.o: src/state_machine.cc include/state_machine.hh include/utilities.hh
+
+$(OBJ_DIR)/options_parsing.o: src/options_parsing.cc include/options_parsing.hh
 
 clean_obj:
 	rm $(OBJ_DIR)/*.o

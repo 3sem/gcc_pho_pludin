@@ -13,7 +13,7 @@
 
 #include "utilities.hh"
 
-class FileParser
+class FileReader
 {
 protected:
     std::string file_content_buf;
@@ -22,7 +22,7 @@ protected:
 };
 
 
-class PassLogParser : public FileParser
+class PassLogParser : public FileReader
 {
     std::vector<pass_info> info_vec_;
 
@@ -84,7 +84,7 @@ private:
 
 };
 
-class PassToReorderParser : public FileParser
+class PassToReorderParser : public FileReader
 {
     std::vector<std::string> pass_vec_;
 

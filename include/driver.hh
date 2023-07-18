@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <filesystem>
 #include "utilities.hh"
 #include "pass_printer.hh"
 
@@ -69,6 +70,38 @@ public:
     void set_if_shuffle_multiple ( bool flag ) { shuffle_only_one = flag; }
     void set_if_breakdown_list2  ( bool flag ) { breakdown_list2 = flag; }
 
+    int generate_file_with_shuffle(const std::string& to_shuffle_file, const std::string& to_print_to)
+    {
+        std::filesystem::path path_to_shuffle(to_shuffle_file);
+
+        std::unordered_map<std::string, int> list_to_starting_property = { {"to_shuffle1.txt", 76079}, {"to_shuffle2.txt", 76079},
+                                                                           {"to_shuffle3.txt", 130760}, {"to_shuffle4.txt", 126255}        };
+        int failed = 0;
+        if (std::string{path_to_shuffle.filename()} == "to_shuffle2.txt")
+        {
+            failed = generate_shuffled_list2(path_to_shuffle);
+            if (failed)
+                return PassListGenerator::COULD_NOT_GEN;
+        }
+        else
+        {
+            failed = get_shuffled_vec(path_to_shuffle, list_to_starting_property[std::string{path_to_shuffle.filename()}]);
+            if (failed)
+                return PassListGenerator::COULD_NOT_GEN;
+            if (auto&& loop2_begin = std::find(shuffled.begin(), shuffled.end(), "loop2_init"); loop2_begin != shuffled.end())
+            {
+                auto&& loop2_end = std::find(shuffled.begin(), shuffled.end(), "loop2_done");
+                modify_subpasses(loop2_begin, ++loop2_end);
+            }
+        }
+
+        PassPrinter to_dump(to_print_to);
+        to_dump.print(shuffled.begin(), shuffled.end());
+
+        return 0;
+    }
+
+private:
     std::pair<unsigned long, unsigned long> fill_gen_info_vec(const std::string& constraints_file)
     {
         log_parser.parse_log(descript_file_);
@@ -95,10 +128,11 @@ public:
         gen.set_passes_vec(pass_parser.begin(), pass_parser.end());
     }
 
-    int get_shuffled_vec(const std::string& to_shuffle_file, unsigned long starting_prop)
+    int get_shuffled_vec(const std::filesystem::path& to_shuffle_file, unsigned long starting_prop)
     {
-        auto&& list_num = std::find_if(to_shuffle_file.begin(), to_shuffle_file.end(), [](const char c){ return isdigit(c); });
-        std::string constraints_file = std::string{"lists/constraints"} + std::string{list_num, to_shuffle_file.end()};
+        std::string file_name = to_shuffle_file.filename();
+        auto&& list_num = std::find_if(file_name.begin(), file_name.end(), [](const char c){ return isdigit(c); });
+        std::string constraints_file = to_shuffle_file.parent_path().append("constraints").concat(std::string{list_num, file_name.end()});
 
         auto&& [custom_start_state, custom_end_state] = fill_gen_info_vec(constraints_file);
         fill_gen_pass_vec(to_shuffle_file);
@@ -120,20 +154,22 @@ public:
         return 0;
     }
 
-    int generate_shuffled_list2()
+    int generate_shuffled_list2(const std::filesystem::path& path_to_shuffle)
     {
         static constexpr unsigned long FIRST_PART_START_PROP = 76079;
         static constexpr unsigned long SECOND_PART_START_PROP = FIRST_PART_START_PROP | (1 << 14) | (1 << 10) | (1 << 15);
         static constexpr unsigned long LOOP_START_PROP = SECOND_PART_START_PROP;
 
-        std::string constraints_file_first_part = "lists/constraints2_1.txt";
-        std::string constraints_file_second_part = "lists/constraints2_1.txt";
+        const std::filesystem::path& parent_dir = path_to_shuffle.parent_path();
+
+        std::string constraints_file_first_part = path_to_shuffle.parent_path() / "constraints2_1.txt";
+        std::string constraints_file_second_part = path_to_shuffle.parent_path() / "constraints2_2.txt";
 
         int failed = 0;
         std::vector<std::string> assembled_list2;
         if (breakdown_list2)
         {
-            std::string first_part_to_shuffle = std::string{"lists/to_shuffle2_1.txt"};
+            std::string first_part_to_shuffle = parent_dir / "to_shuffle2_1.txt";
             failed = get_shuffled_vec(first_part_to_shuffle, FIRST_PART_START_PROP);
             if (failed)
                 return PassListGenerator::COULD_NOT_GEN;
@@ -142,7 +178,7 @@ public:
 
             assembled_list2.push_back("pre");
 
-            std::string second_part_to_shuffle = std::string{"lists/to_shuffle2_2.txt"};
+            std::string second_part_to_shuffle = parent_dir / "to_shuffle2_2.txt";
             failed = get_shuffled_vec(second_part_to_shuffle, SECOND_PART_START_PROP);
             if (failed)
                 return PassListGenerator::COULD_NOT_GEN;
@@ -153,7 +189,7 @@ public:
         }
         else
         {
-            failed = get_shuffled_vec("lists/to_shuffle2.txt", FIRST_PART_START_PROP);
+            failed = get_shuffled_vec(std::string{path_to_shuffle}, FIRST_PART_START_PROP);
             if (failed)
                 return PassListGenerator::COULD_NOT_GEN;
 
@@ -162,15 +198,15 @@ public:
 
         if (auto && it = std::find(assembled_list2.begin(), assembled_list2.end(), "loop"); (it != assembled_list2.end()))
         {
+            std::string list4_path = parent_dir / "to_shuffle4.txt";
             if (shuffle_only_one)
             {
-                pass_parser.parse_passes_file("lists/to_shuffle4.txt");
+                pass_parser.parse_passes_file(list4_path);
                 assembled_list2.insert(++it, pass_parser.begin(), pass_parser.end());
             }
             else
             {
-                std::string to_shuffle_loop = std::string{"lists/to_shuffle4.txt"};
-                failed = get_shuffled_vec(to_shuffle_loop, LOOP_START_PROP);
+                failed = get_shuffled_vec(list4_path, LOOP_START_PROP);
                 if (failed)
                     return PassListGenerator::COULD_NOT_GEN;
 
@@ -185,35 +221,6 @@ public:
         shuffled = std::move(assembled_list2);
 
         return failed;
-    }
-
-    int generate_file_with_shuffle(const std::string& to_shuffle_file, const std::string& to_print_to)
-    {
-        std::unordered_map<std::string, int> list_to_starting_property = { {"lists/to_shuffle1.txt", 76079}, {"lists/to_shuffle2.txt", 76079},
-                                                                           {"lists/to_shuffle3.txt", 130760}, {"lists/to_shuffle4.txt", 126255}        };
-        int failed = 0;
-        if (to_shuffle_file == "lists/to_shuffle2.txt")
-        {
-            failed = generate_shuffled_list2();
-            if (failed)
-                return PassListGenerator::COULD_NOT_GEN;
-        }
-        else
-        {
-            failed = get_shuffled_vec(to_shuffle_file, list_to_starting_property[to_shuffle_file]);
-            if (failed)
-                return PassListGenerator::COULD_NOT_GEN;
-            if (auto&& loop2_begin = std::find(shuffled.begin(), shuffled.end(), "loop2_init"); loop2_begin != shuffled.end())
-            {
-                auto&& loop2_end = std::find(shuffled.begin(), shuffled.end(), "loop2_done");
-                modify_subpasses(loop2_begin, ++loop2_end);
-            }
-        }
-
-        PassPrinter to_dump(to_print_to);
-        to_dump.print(shuffled.begin(), shuffled.end());
-
-        return 0;
     }
 };
 

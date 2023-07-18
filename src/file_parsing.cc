@@ -1,6 +1,6 @@
 #include "file_parsing.hh"
 
-void FileParser::get_file_text(const std::string& file_name)
+void FileReader::get_file_text(const std::string& file_name)
 {
     std::ifstream input;
     input.exceptions(std::ifstream::failbit);
