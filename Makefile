@@ -46,6 +46,7 @@ CXXFLAGS = -std=c++2a -O2
 HEADER_DIR = include
 
 CXXFLAGS += -I$(HEADER_DIR)
+GCC_MIN_VERSION=-10
 
 SOURCES = main.cc file_parsing.cc
 SRC := $(addprefix $(SRC_DIR)/, $(SOURCES))
@@ -57,10 +58,10 @@ OBJ := $(addprefix $(OBJ_DIR)/, $(OBJECTS))
 EXEC = shuffle
 
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cc
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX)$(GCC_MIN_VERSION) $(CXXFLAGS) -c -o $@ $<
 
 $(EXEC): $(OBJ)
-	$(CXX) $(CXXFLAGS) $(OBJ) -o $(EXEC)
+	$(CXX)$(GCC_MIN_VERSION) $(CXXFLAGS) $(OBJ) -o $(EXEC)
 
 shuffle1 : $(EXEC)
 	./$(EXEC) lists/to_shuffle1.txt list1.txt
