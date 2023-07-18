@@ -8,7 +8,7 @@ during it's work and which ones it destroyes. Obviously, because of this pass re
 ## Class hierarchy
 
 ### Concise description
-There are currently following classes: Driver, PropertyStateMachine, PassListGenerator, PassDumper, FileParser, PassLogParser, PassToReorderParser
+There are currently following classes: Driver, PropertyStateMachine, PassListGenerator, PassPrinter, FileParser, PassLogParser, PassToReorderParser
 
 The PropertyStateMachine responsibilty is just to store already current reordered sequence of passes, property mask after applyng those passes and to correctly apply new given pass
 
@@ -16,7 +16,7 @@ PassListGenerator reorders given pass list, using PropertyStateMachine to apply 
 
 Driver is just a small class over PassListGenerator, which gives correct files with passes list and prints out passes lists to correct files
 
-PassDumper prints pass list to given file with small adjustments needed for plugin to worK
+PassPrinter prints pass list to given file with small adjustments needed for plugin to worK
 
 FileParser is a base class for PassLogParser and PassToReorderParser which parse files with info about passes and with passes to reorder respectively
 
@@ -43,11 +43,11 @@ PassListGenerator has a verify() method, which takes in starting property and a 
 This struct just keeps the state, applied pass list and can correctly applies futher passes. To work, it takes a map from passes ids to property of corresponding pass in it's constructor
 It also has static methods to compress two properties / pass properties structs into one.
 
-### PassDumper
+### PassPrinter
 This class takes in file where to dump, and prefix/suffix to print passes with. Also, it takes into account some formating needed for plugin to work correctly (for example: loop2_* are all subpasses of loop2, and the plugin requires subpasses to be printed with '>' to be parsed correctly)
 
 ### Driver
-This is a template class, which takes log parser and file with passes to reorder parser, via them prepares the information about passes and vector of passes to be reordered for PassListGenerator. It correctly sets the starting state for PassListGenerator and invokes it's method to reorder. It uses PassDumper to print out resulting sequences.
+This is a template class, which takes log parser and file with passes to reorder parser, via them prepares the information about passes and vector of passes to be reordered for PassListGenerator. It correctly sets the starting state for PassListGenerator and invokes it's method to reorder. It uses PassPrinter to print out resulting sequences.
 
 It handles some corner cases, which were dicovered when gcc's source code was examined: for example, "loop" optimization has a big sub-list of optimizations which can also be reordered, but this sub-list must be printed with '>' and must all be after "loop" optimization for plugin to work correctly; so if Driver in resulting sequence encounteres "loop" optimization, it prints that whole sub-list after it, and can reorder it beforehand (has a flag to show whether we want to reorder that sub-list or not)
 

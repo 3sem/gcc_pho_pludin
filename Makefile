@@ -48,7 +48,7 @@ HEADER_DIR = include
 CXXFLAGS += -I$(HEADER_DIR)
 GCC_MIN_VERSION=-10
 
-SOURCES = main.cc file_parsing.cc
+SOURCES = main.cc file_parsing.cc state_machine.cc
 SRC := $(addprefix $(SRC_DIR)/, $(SOURCES))
 
 OBJECTS = $(SOURCES:.cc=.o)
@@ -78,9 +78,11 @@ shuffle3 : $(EXEC)
 shuffle4 : $(EXEC)
 	./$(EXEC) lists/to_shuffle4.txt list4.txt
 
-$(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh include/file_parsing.hh
+$(OBJ_DIR)/main.o: src/main.cc include/utilities.hh include/driver.hh include/state_machine.hh include/file_parsing.hh include/pass_printer.hh
 
 $(OBJ_DIR)/file_parsing.o: src/file_parsing.cc include/file_parsing.hh include/utilities.hh
+
+$(OBJ_DIR)/state_machine.o: src/state_machine.cc include/state_machine.hh include/utilities.hh
 
 clean_obj:
 	rm $(OBJ_DIR)/*.o

@@ -6,7 +6,8 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
-#include "state_machine.hh"
+#include "utilities.hh"
+#include "pass_printer.hh"
 
 template<typename T>
 concept Range = requires(T a)
@@ -173,12 +174,9 @@ public:
                 if (failed)
                     return PassListGenerator::COULD_NOT_GEN;
 
-                for (auto&& str_it : shuffled)
-                {
-                    str_it.insert(str_it.begin(), '>');
-                }
-                shuffled.insert(shuffled.begin(), ">loopinit");
-                shuffled.push_back(">loopdone");
+                shuffled.insert(shuffled.begin(), "loopinit");
+                shuffled.push_back("loopdone");
+                modify_subpasses(shuffled.begin(), shuffled.end());
 
                 assembled_list2.insert(++it, shuffled.begin(), shuffled.end());
             }
@@ -205,10 +203,15 @@ public:
             failed = get_shuffled_vec(to_shuffle_file, list_to_starting_property[to_shuffle_file]);
             if (failed)
                 return PassListGenerator::COULD_NOT_GEN;
+            if (auto&& loop2_begin = std::find(shuffled.begin(), shuffled.end(), "loop2_init"); loop2_begin != shuffled.end())
+            {
+                auto&& loop2_end = std::find(shuffled.begin(), shuffled.end(), "loop2_done");
+                modify_subpasses(loop2_begin, ++loop2_end);
+            }
         }
 
-        PassDumper to_dump(to_print_to);
-        to_dump.dump(shuffled.begin(), shuffled.end());
+        PassPrinter to_dump(to_print_to);
+        to_dump.print(shuffled.begin(), shuffled.end());
 
         return 0;
     }
