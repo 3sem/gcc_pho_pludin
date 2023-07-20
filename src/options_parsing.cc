@@ -25,6 +25,9 @@ int ShufflerOptionParser::parse_command_line_options(int argcount, char* arg_vec
                 case 'b':
                     breakdown_list2 = true;
                     break;
+                case 'k':
+                    ok_if_not_all_used = true;
+                    break;
                 case '?':
                 default :
                     std::cerr << "Encountered unknown option" << std::endl;

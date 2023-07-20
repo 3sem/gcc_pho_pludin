@@ -11,7 +11,7 @@ namespace gcc_reorder
 class ShufflerOptionParser
 {
 
-    const std::string short_opts = "l:i:o:r:b";
+    const std::string short_opts = "l:i:o:r:bk";
 
     const std::vector<option> longopts =
     {
@@ -20,10 +20,12 @@ class ShufflerOptionParser
         {"restrict_file", required_argument, NULL, 'r'},
         {"log_file", required_argument, NULL, 'l'},
         {"break", no_argument, NULL, 'b'},
+        {"ok_if_not_all_used", no_argument, NULL, 'k'},
     };
 
 public:
     bool breakdown_list2 = false;
+    bool ok_if_not_all_used = false;
     std::string input_file;
     std::string output_file;
     std::string restrict_file;

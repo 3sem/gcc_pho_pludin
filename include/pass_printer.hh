@@ -8,6 +8,7 @@
 namespace gcc_reorder
 {
 
+// change how sub passes will be printed, so that plugin would work correctly
 template <typename iter>
 void modify_subpasses(iter str_vec_begin, iter str_vec_end)
 {
@@ -17,30 +18,19 @@ void modify_subpasses(iter str_vec_begin, iter str_vec_end)
     }
 }
 
-class PassPrinter
+template <typename iter>
+void print_passes_to_file(iter begin, iter end, const std::string& file_name, const std::string& prefix = "", const std::string& suffix = "")
 {
-    std::string file_name_;
-    std::string prefix_;
-    std::string suffix_;
-public:
-    PassPrinter(const std::string& file_name, const std::string& prefix = "", const std::string& suffix = "") :
-                file_name_(file_name), prefix_(prefix), suffix_(suffix)
-    {}
-
-    template <typename iter>
-    void print(iter begin, iter end)
+    std::stringstream buffer;
+    for (auto&& it = begin; it != end; it++)
     {
-        std::stringstream buffer;
-        for (auto&& it = begin; it != end; it++)
-        {
-            buffer << prefix_ << *it << suffix_ << std::endl;
-        }
-
-        std::ofstream output;
-        output.open(file_name_);
-        output << buffer.str();
+        buffer << prefix << *it << suffix << std::endl;
     }
-};
+
+    std::ofstream output;
+    output.open(file_name);
+    output << buffer.str();
+}
 
 } // namespace gcc_reorder
 

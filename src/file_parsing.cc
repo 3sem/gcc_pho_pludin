@@ -50,7 +50,7 @@ std::pair<unsigned long, unsigned long> PassLogParser::parse_constraints(const s
     }
     catch(const std::ios_base::failure& exc)
     {
-        std::cerr << "Could not open file " << constraint_file_name << " to get constraints info" << std::endl;
+        std::cerr << "Warning! Could not open file " << constraint_file_name << " to get constraints info" << std::endl;
         return {0, 0};
     }
 
@@ -101,8 +101,6 @@ std::pair<unsigned long, unsigned long> PassLogParser::parse_constraints(const s
         to_fill_constraint_it->prop.custom.provided  |= prop.provided;
         to_fill_constraint_it->prop.custom.provided  &= ~prop.destroyed;
         to_fill_constraint_it->prop.custom.destroyed |= prop.destroyed;
-
-        // std::cout << "Got: " << info.name << ' ' << req_iter_pair.first << ' ' << prov_iter_pair.first << ' ' << destr_iter_pair.first << std::endl;
 
         it = second_it;
     }

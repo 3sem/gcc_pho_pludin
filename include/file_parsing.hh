@@ -16,6 +16,7 @@
 namespace gcc_reorder
 {
 
+// base class for parser with method to get file's content
 class FileReader
 {
 protected:
@@ -30,10 +31,10 @@ class PassLogParser : public FileReader
     std::vector<pass_info> info_vec_;
 
 public:
-    // parses log (named unique_passes.txt) with information about passes' property restrictions from the gcc itself
+    // parses log with information about passes' property restrictions from the gcc itself
     void parse_log(const std::string& info_file_name);
 
-    
+    // parses custom constraints about reordering passes and adds the received information into existing info_vec_ vector
     std::pair<unsigned long, unsigned long> parse_constraints(const std::string& constraint_file_name);
 
     using iterator = std::vector<pass_info>::iterator;
@@ -87,6 +88,7 @@ private:
 
 };
 
+// reads passes to reorder from file, stores them into vector and gives access to it through begin() and end() methods
 class PassToReorderParser : public FileReader
 {
     std::vector<std::string> pass_vec_;

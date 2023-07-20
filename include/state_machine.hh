@@ -86,7 +86,7 @@ struct PropertyStateMachine
 // It then builds hash maps: unique property requirement -> all passes that require it
 // Then, using PropertyStateMachine, and built earlier hash map it fills a vector of passes that could be taken as next in generated sequence
 // and chooses one randomly from this vector
-struct PassListGenerator
+class PassListGenerator
 {
     std::vector<pass_info> info_vec_;
     std::unordered_map<std::string, int> name_to_id_map_; // we give each pass an id and work with ids to avoid needless heap indirection
@@ -104,6 +104,8 @@ struct PassListGenerator
     bool fail_if_not_all_passes_used = true; // flag to determine whether to return COULD_NOT_GEN if could not use all passes in starting list 
                                              // while reordering
 
+public:
+
     static constexpr int COULD_NOT_GEN = -1;
     static constexpr int USED_PASS = -2;
     static constexpr int MAX_PASS_AMOUNT = 250;
@@ -115,7 +117,7 @@ struct PassListGenerator
     PassListGenerator(iter_info begin_info, iter_info end_info, iter_name begin_name, iter_name end_name) : 
         info_vec_{begin_info, end_info}, pass_vec_{begin_name, end_name}
     {
-        get_pass_name_to_id_maps();
+        setup_structures();
     }
 
     void set_fail_gen_flag (bool flag) { fail_if_not_all_passes_used = flag; }
@@ -131,6 +133,33 @@ struct PassListGenerator
     {
         pass_vec_ = {begin, end};
     }
+
+
+    // the shuffling itself
+    int shuffle_pass_order(const std::pair<unsigned long, unsigned long>& initial_property_state,
+                           const std::pair<unsigned long, unsigned long>& ending_property_state);
+
+    // Verify a sequence
+    template <typename iter>
+    void verify(iter begin, iter end, std::pair<unsigned long, unsigned long> initial_property_state)
+    {
+        PropertyStateMachine state(pass_to_properties_);
+        state.original_property_state = initial_property_state.first;
+        state.custom_property_state = initial_property_state.second;
+
+        for (; begin != end; begin++)
+        {
+            state.apply_pass(name_to_id_map_[*begin]);
+        }
+        std::cerr << state.original_property_state << state.custom_property_state << std::endl;
+    }
+
+    // map passes' names onto ids and batches of passes onto ids
+    void setup_structures();
+
+private:
+    // create a hash map : unique requirement -> all passes (from given range to reorder) that require it
+    void generate_prop_passes_map();
 
     // Give a batch of passes a single id
     template <typename iter>
@@ -154,9 +183,6 @@ struct PassListGenerator
         }
     }
 
-    // map passes' names onto ids and batches of passes onto ids
-    void get_pass_name_to_id_maps();
-
     // necessary for more efficient finding of passes, which original and custom required property are satisfied with the current state
     template <typename iter>
     std::unordered_set<std::pair<unsigned long, unsigned long>> get_unique_requirements(iter begin, iter end)
@@ -170,30 +196,7 @@ struct PassListGenerator
         return unique_requirements;
     }
 
-    // create a hash map : unique requirement -> all passes (from given range to reorder) that require it
-    void generate_prop_passes_map();
-
-    // the shuffling itself
-    int shuffle_pass_order(const std::pair<unsigned long, unsigned long>& initial_property_state,
-                           const std::pair<unsigned long, unsigned long>& ending_property_state);
-
-    // Verify a sequence from file_name
-    template <typename iter>
-    void verify(iter begin, iter end, std::pair<unsigned long, unsigned long> initial_property_state)
-    {
-        PropertyStateMachine state(pass_to_properties_);
-        state.original_property_state = initial_property_state.first;
-        state.custom_property_state = initial_property_state.second;
-
-        for (; begin != end; begin++)
-        {
-            // std::cout << "checking " << it << ' ' << "with property stuff:: " << pass_to_properties_[name_to_id_map_[it]].required << " ";
-            // std::cout << pass_to_properties_[name_to_id_map_[it]].provided << " " << pass_to_properties_[name_to_id_map_[it]].destroyed;
-            // std::cout << " and the state is " << state.property_state << std::endl;
-            state.apply_pass(name_to_id_map_[*begin]);
-        }
-        std::cerr << state.original_property_state << state.custom_property_state << std::endl;
-    }
+public:
 
     using iterator = std::vector<std::string>::iterator;
     using const_iterator = std::vector<std::string>::const_iterator;

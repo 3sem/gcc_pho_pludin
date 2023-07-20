@@ -4,7 +4,7 @@ namespace gcc_reorder
 {
 
 // map passes' names onto ids and batches of passes onto ids
-void PassListGenerator::get_pass_name_to_id_maps()
+void PassListGenerator::setup_structures()
 {
     int i = 0;
 
@@ -83,8 +83,6 @@ int PassListGenerator::shuffle_pass_order(const std::pair<unsigned long, unsigne
     {
         // clear the previously generated sequence if there was one
         // and generate all necessary maps
-
-        // std::cout << "TRY#" << i << std::endl;
         state.passes_.clear();
         unique_requirement_to_passes_.clear();
         shuffled_passes.clear();
@@ -123,23 +121,11 @@ int PassListGenerator::shuffle_pass_order(const std::pair<unsigned long, unsigne
 
             // choose a pass randomly
 
-            // std::cout << "Available: " << std::endl;
-            // for (auto&& it : passes_to_choose_from)
-            // {
-            //     std::cout << id_to_name[it] << ' ';
-            // }
-            // std::cout << std::endl;
-
             std::uniform_int_distribution<> to_get_index(0, passes_to_choose_from.size() - 1);
 
             int position_of_chosen_pass = to_get_index(gen);
             int chosen_pass = passes_to_choose_from[position_of_chosen_pass];
-            // std::cout << "Chosen: " << id_to_name[chosen_pass] << std::endl;
-
-            // std::cout << "Before " << state.custom_property_state << std::endl;
             state.apply_pass(chosen_pass);
-            // std::cout << "After " << state.custom_property_state << std::endl;
-
 
             // reset available passes and erase used pass from pool of all passes to reorder
             passes_to_choose_from.clear();
@@ -148,8 +134,6 @@ int PassListGenerator::shuffle_pass_order(const std::pair<unsigned long, unsigne
             auto&& to_erase_used_pass_from = unique_requirement_to_passes_[{properties_of_chosen.original.required, properties_of_chosen.custom.required}];
             to_erase_used_pass_from.erase(std::find(to_erase_used_pass_from.begin(), to_erase_used_pass_from.end(), chosen_pass));
         }
-
-        // std::cout << state.original_property_state << ' ' << state.custom_property_state << std::endl;
 
         // if could not meet required state by the end of sequence - regenerate
         if (((state.original_property_state & ending_property_state.first) != ending_property_state.first) ||
